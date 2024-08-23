@@ -7,18 +7,19 @@ from collections import namedtuple
 import bpy
 
 from .operators import register_operators, unregister_operators
-from .panels import register_panels, unregister_panels
+from .panels import register_connection_properties, register_panels, unregister_panels
 
 bl_info = {
     "name": "Portal",
     "author": "Zeke Zhang",
-    "version": (0, 1, 0),
+    "version": (0, 0, 1),
     "blender": (4, 2, 0),
-    "category": "Object",
-    "location": "View3D > Sidebar > Portal Pipe",
-    "description": "Addon for communication via named pipes",
+    "category": "System",
+    "location": "View3D > Sidebar > Portal",
+    "description": "Addon for communication via IPC ",
     "tracker_url": "https://github.com/sean1832/portal.blender/issues",
-    "support": "COMMUNITY",
+    "doc_url": "https://github.com/sean1832/portal.blender",
+    "support": "TESTING",
 }
 
 # *************************************
@@ -29,9 +30,7 @@ Dependency = namedtuple("Dependency", ["module", "package", "name"])
 
 dependencies = (
     Dependency(module="pywintypes", package="pywin32==306", name=None),
-    Dependency(module="win32event", package="pywin32==306", name=None),
-    Dependency(module="win32file", package="pywin32==306", name=None),
-    Dependency(module="win32pipe", package="pywin32==306", name=None),
+    Dependency(module="websockets", package="websockets==12.0", name=None),
 )
 
 
@@ -90,7 +89,6 @@ class RestartBlenderOperator(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width=300)
 
     def draw(self, context):
-        
         self.layout.label(text="Restart Blender to complete the installation?", icon="QUESTION")
 
     def execute(self, context):
@@ -155,7 +153,7 @@ class DependencyWarningPanel(bpy.types.Panel):
             "1. Open the preferences (Edit > Preferences > Add-ons).",
             "2. Search for the 'Portal Pipe' add-on.",
             "3. Open the details section of the add-on.",
-            "4. Click on the 'Install dependencies' button."
+            "4. Click on the 'Install dependencies' button.",
         ]
         for line in lines:
             layout.label(text=line)
@@ -200,18 +198,6 @@ def register():
     if DependencyManager.are_dependencies_installed():
         register_operators()
         register_panels()
-        bpy.types.Scene.pipe_name = bpy.props.StringProperty(name="Pipe Name", default="testpipe")
-        bpy.types.Scene.event_timer = bpy.props.FloatProperty(
-            name="Interval (seconds)", default=0.01, min=0.001, max=1.0
-        )
-        bpy.types.Scene.data_type = bpy.props.EnumProperty(
-            name="Data Type",
-            items=[
-                ("Mesh", "Mesh", "Receive mesh data"),
-                ("Text", "Text", "Receive text data"),
-            ],
-            default="Mesh",
-        )
 
 
 def unregister():
@@ -219,9 +205,6 @@ def unregister():
     if DependencyManager.are_dependencies_installed():
         unregister_operators()
         unregister_panels()
-        del bpy.types.Scene.pipe_name
-        del bpy.types.Scene.event_timer
-        del bpy.types.Scene.data_type
     unregister_dependencies()
 
 

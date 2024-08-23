@@ -6,7 +6,7 @@ from .pipe_server import PipeServerManager
 
 
 class StartPipeServerOperator(bpy.types.Operator):
-    bl_idname = "pipe.start_pipe_server"
+    bl_idname = "pipe.start_server"
     bl_label = "Start Pipe Server"
 
     def execute(self, context):
@@ -17,7 +17,7 @@ class StartPipeServerOperator(bpy.types.Operator):
 
 
 class StopPipeServerOperator(bpy.types.Operator):
-    bl_idname = "pipe.stop_pipe_server"
+    bl_idname = "pipe.stop_server"
     bl_label = "Stop Pipe Server"
 
     def execute(self, context):
