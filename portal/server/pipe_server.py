@@ -5,7 +5,7 @@ import struct
 import threading
 import time
 
-import bpy # type: ignore
+import bpy  # type: ignore
 
 # Attempt to import the pywin32 modules safely
 try:
@@ -102,16 +102,30 @@ class PipeServerManager:
     @staticmethod
     def close_handles():
         if PipeServerManager.pipe_handle:
+            try:
+                # Disconnect the named pipe
+                win32pipe.DisconnectNamedPipe(PipeServerManager.pipe_handle)
+            except pywintypes.error as e:
+                if e.winerror == 233:  # no process is on the other end of the pipe
+                    pass
+                else:
+                    print(f"Error disconnecting pipe: {e}")
+
+            # Close the pipe handle
             win32file.CloseHandle(PipeServerManager.pipe_handle)
             PipeServerManager.pipe_handle = None
+
         if PipeServerManager.pipe_event:
+            # Close the event handle
             win32file.CloseHandle(PipeServerManager.pipe_event)
             PipeServerManager.pipe_event = None
 
+        # Clear the data queue
+        with PipeServerManager.data_queue.mutex:
+            PipeServerManager.data_queue.queue.clear()
+
     @staticmethod
     def start_server():
-        if not PYWIN32_AVAILABLE:
-            return
         PipeServerManager.shutdown_event.clear()
         PipeServerManager._server_thread = threading.Thread(
             target=PipeServerManager.run_server, daemon=True
@@ -129,7 +143,9 @@ class PipeServerManager:
                 pass
         if PipeServerManager.pipe_event:
             win32event.SetEvent(PipeServerManager.pipe_event)
-        PipeServerManager._server_thread.join()
+        if PipeServerManager._server_thread:
+            PipeServerManager._server_thread.join()
+        PipeServerManager.close_handles()
         print("Pipe server stopped...")
 
     @staticmethod
@@ -145,5 +161,4 @@ class PipeServerManager:
     def is_shutdown():
         if not PYWIN32_AVAILABLE:
             return True
-        return PipeServerManager.shutdown_event.is_set()
         return PipeServerManager.shutdown_event.is_set()
