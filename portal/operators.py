@@ -2,48 +2,65 @@ import queue
 
 import bpy
 
-from .pipe_server import PipeServerManager
+from .handlers import DataHandler
+from .server.pipe_server import PipeServerManager
+from .server.mmap_server import MMFServerManager
 
 
-class StartPipeServerOperator(bpy.types.Operator):
-    bl_idname = "pipe.start_server"
-    bl_label = "Start Pipe Server"
+# Mapping of connection types to their respective server manager classes
+SERVER_MANAGERS = {
+    "NAMED_PIPE": PipeServerManager,
+    "MMAP": MMFServerManager,
+    # "WEBSOCKETS": WebSocketServerManager,
+    # "UDP": UDPServerManager,
+}
+
+class StartServerOperator(bpy.types.Operator):
+    bl_idname = "portal.start_server"
+    bl_label = "Start Server"
 
     def execute(self, context):
-        if not PipeServerManager.is_running():
-            PipeServerManager.start_server()
+        connection_type = context.scene.connection_type
+        server_manager = SERVER_MANAGERS.get(connection_type)
+
+        if server_manager and not server_manager.is_running():
+            server_manager.start_server()
             bpy.ops.wm.modal_operator("INVOKE_DEFAULT")
         return {"FINISHED"}
 
 
-class StopPipeServerOperator(bpy.types.Operator):
-    bl_idname = "pipe.stop_server"
-    bl_label = "Stop Pipe Server"
+class StopServerOperator(bpy.types.Operator):
+    bl_idname = "portal.stop_server"
+    bl_label = "Stop Server"
 
     def execute(self, context):
-        if PipeServerManager.is_running():
-            PipeServerManager.stop_server()
+        connection_type = context.scene.connection_type
+        server_manager = SERVER_MANAGERS.get(connection_type)
+
+        if server_manager and server_manager.is_running():
+            server_manager.stop_server()
         return {"FINISHED"}
 
 
 class ModalOperator(bpy.types.Operator):
     bl_idname = "wm.modal_operator"
-    bl_label = "Pipe Listener Modal Operator"
+    bl_label = "Listener Modal Operator"
 
     def __init__(self):
         self._timer = None
 
     def modal(self, context, event):
-        if PipeServerManager.is_shutdown():
+        connection_type = context.scene.connection_type
+        server_manager = SERVER_MANAGERS.get(connection_type)
+
+        if server_manager and server_manager.is_shutdown():
             self.cancel(context)
             return {"CANCELLED"}
 
         if event.type == "TIMER":
-            while not PipeServerManager.data_queue.empty():
+            while not server_manager.data_queue.empty():
                 try:
-                    data = PipeServerManager.data_queue.get_nowait()
-                    from .handlers import DataHandler
-
+                    data = server_manager.data_queue.get_nowait()
                     DataHandler.handle_data(data, context.scene.data_type)
                 except queue.Empty:
                     break
@@ -61,12 +78,12 @@ class ModalOperator(bpy.types.Operator):
 
 
 def register_operators():
-    bpy.utils.register_class(StartPipeServerOperator)
-    bpy.utils.register_class(StopPipeServerOperator)
+    bpy.utils.register_class(StartServerOperator)
+    bpy.utils.register_class(StopServerOperator)
     bpy.utils.register_class(ModalOperator)
 
 
 def unregister_operators():
-    bpy.utils.unregister_class(StartPipeServerOperator)
-    bpy.utils.unregister_class(StopPipeServerOperator)
+    bpy.utils.unregister_class(StartServerOperator)
+    bpy.utils.unregister_class(StopServerOperator)
     bpy.utils.unregister_class(ModalOperator)

@@ -7,7 +7,7 @@ from collections import namedtuple
 import bpy
 
 from .operators import register_operators, unregister_operators
-from .panels import register_connection_properties, register_panels, unregister_panels
+from .panels import register_panels, unregister_panels
 
 bl_info = {
     "name": "Portal",
