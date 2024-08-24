@@ -4,7 +4,7 @@ import subprocess
 import sys
 from collections import namedtuple
 
-import bpy
+import bpy # type: ignore
 
 from .operators import register_operators, unregister_operators
 from .panels import register_panels, unregister_panels

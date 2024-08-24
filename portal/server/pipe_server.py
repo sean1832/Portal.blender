@@ -1,18 +1,19 @@
 import gzip
 import io
-import json
 import queue
 import struct
 import threading
 import time
 
-import bpy
+import bpy # type: ignore
+
 # Attempt to import the pywin32 modules safely
 try:
-    import pywintypes
-    import win32event
-    import win32file
-    import win32pipe
+    import pywintypes  # type: ignore
+    import win32event  # type: ignore
+    import win32file  # type: ignore
+    import win32pipe  # type: ignore
+
     PYWIN32_AVAILABLE = True
 except ImportError:
     PYWIN32_AVAILABLE = False
@@ -144,4 +145,5 @@ class PipeServerManager:
     def is_shutdown():
         if not PYWIN32_AVAILABLE:
             return True
+        return PipeServerManager.shutdown_event.is_set()
         return PipeServerManager.shutdown_event.is_set()

@@ -1,5 +1,7 @@
 import json
-import bpy
+
+import bpy  # type: ignore
+
 
 class DataHandler:
     @staticmethod
@@ -14,6 +16,7 @@ class DataHandler:
                     MeshHandler.create_or_replace_mesh(f"object_{i}", vertices, faces)
         except json.JSONDecodeError:
             print(f"Unsupported data: {data}")
+
 
 class MeshHandler:
     @staticmethod
@@ -37,5 +40,7 @@ class MeshHandler:
         else:
             new_object = bpy.data.objects.new(object_name, new_mesh_data)
             bpy.context.collection.objects.link(new_object)
+
+        new_mesh_data.update()
 
         new_mesh_data.update()

@@ -1,6 +1,6 @@
 import queue
 
-import bpy
+import bpy # type: ignore
 
 from .handlers import DataHandler
 from .server.pipe_server import PipeServerManager

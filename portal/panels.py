@@ -1,4 +1,4 @@
-import bpy
+import bpy # type: ignore
 
 from .server.pipe_server import PipeServerManager  # Adjust the import path as necessary
 

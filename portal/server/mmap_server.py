@@ -1,10 +1,10 @@
 import mmap
+import queue
+import struct
 import threading
 import time
-import struct
-import queue
 
-import bpy
+import bpy  # type: ignore
 
 
 class MMFServerManager:
