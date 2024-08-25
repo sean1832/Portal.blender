@@ -2,6 +2,8 @@
 
 Portal.blender is a Blender add-on that allows you to communicate data between Blender and other applications using IPC. It is the Blender adaptor of the [Portal](https://github.com/sean1832/portal) project.
 
+![image](/doc/images/portal-server-panel.png)
+
 ## Installation
 - Download the latest release from the [releases page](https://github.com/sean1832/Portal.blender/releases/latest).
 - Drag and drop the zip file into Blender to install.
@@ -14,6 +16,7 @@ If this is your first time installing the Portal add-on, you will need to instal
 4. Click on the 'Install dependencies' button.
 5. Restart Blender.
 
+![image](/doc/images/dependencies-installation.png)
 
 ## Usage
 - Locate the `Portal Server` panel in the `3D View` sidebar. (Shortcut: `N`)
