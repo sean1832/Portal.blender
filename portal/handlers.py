@@ -1,6 +1,20 @@
+import gzip
+import io
 import json
 
 import bpy  # type: ignore
+
+
+class BinaryHandler:
+    @staticmethod
+    def decompress_if_gzip(data: bytes) -> bytes:
+        if data[:2] == b"\x1f\x8b":
+            with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
+                try:
+                    return gz.read()
+                except OSError:
+                    return data
+        return data
 
 
 class DataHandler:
@@ -43,4 +57,5 @@ class MeshHandler:
 
         new_mesh_data.update()
 
+        new_mesh_data.update()
         new_mesh_data.update()

@@ -6,6 +6,8 @@ import aiohttp  # type: ignore
 import bpy  # type: ignore
 from aiohttp import web  # type: ignore
 
+from ..handlers import BinaryHandler
+
 
 class WebSocketServerManager:
     data_queue = queue.Queue()
@@ -22,8 +24,9 @@ class WebSocketServerManager:
         try:
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.BINARY:
-                    data = msg.data.decode("utf-8")
-                    WebSocketServerManager.data_queue.put(data)
+                    data = msg.data
+                    data = BinaryHandler.decompress_if_gzip(data)
+                    WebSocketServerManager.data_queue.put(data.decode("utf-8"))
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     print("WebSocket connection closed with exception %s" % ws.exception())
                 else:
@@ -81,4 +84,5 @@ class WebSocketServerManager:
 
     @staticmethod
     def is_shutdown():
+        return WebSocketServerManager.shutdown_event.is_set()
         return WebSocketServerManager.shutdown_event.is_set()

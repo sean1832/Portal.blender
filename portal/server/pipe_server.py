@@ -1,11 +1,11 @@
-import gzip
-import io
 import queue
 import struct
 import threading
 import time
 
 import bpy  # type: ignore
+
+from ..handlers import BinaryHandler
 
 # Attempt to import the pywin32 modules safely
 try:
@@ -39,7 +39,7 @@ class PipeServerManager:
                         break
 
                     data = win32file.ReadFile(pipe, size, None)[1]
-                    data = PipeServerManager.decompress_if_gzip(data).decode("utf-8")
+                    data = BinaryHandler.decompress_if_gzip(data).decode("utf-8")
                     PipeServerManager.data_queue.put(data)
                 except pywintypes.error as e:
                     if e.winerror == 109:  # ERROR_BROKEN_PIPE
@@ -48,15 +48,15 @@ class PipeServerManager:
         except Exception as e:
             print(f"Error in handle_raw_bytes: {e}")
 
-    @staticmethod
-    def decompress_if_gzip(data: bytes) -> bytes:
-        if data[:2] == b"\x1f\x8b":
-            with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
-                try:
-                    return gz.read()
-                except OSError:
-                    return data
-        return data
+    # @staticmethod
+    # def decompress_if_gzip(data: bytes) -> bytes:
+    #     if data[:2] == b"\x1f\x8b":
+    #         with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
+    #             try:
+    #                 return gz.read()
+    #             except OSError:
+    #                 return data
+    #     return data
 
     @staticmethod
     def run_server():
@@ -161,4 +161,5 @@ class PipeServerManager:
     def is_shutdown():
         if not PYWIN32_AVAILABLE:
             return True
+        return PipeServerManager.shutdown_event.is_set()
         return PipeServerManager.shutdown_event.is_set()

@@ -4,6 +4,8 @@ import threading
 
 import bpy  # type: ignore
 
+from ..handlers import BinaryHandler
+
 
 class UDPServerManager:
     data_queue = queue.Queue()
@@ -17,6 +19,7 @@ class UDPServerManager:
             try:
                 # 1472 is the max size of a UDP packet
                 data, addr = UDPServerManager._sock.recvfrom(1472)
+                data = BinaryHandler.decompress_if_gzip(data)
                 UDPServerManager.data_queue.put(data.decode("utf-8"))
             except socket.timeout:
                 continue
@@ -63,4 +66,5 @@ class UDPServerManager:
 
     @staticmethod
     def is_shutdown():
+        return UDPServerManager.shutdown_event.is_set()
         return UDPServerManager.shutdown_event.is_set()

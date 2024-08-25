@@ -6,6 +6,8 @@ import time
 
 import bpy  # type: ignore
 
+from ..handlers import BinaryHandler
+
 
 class MMFServerManager:
     data_queue = queue.Queue()
@@ -30,8 +32,9 @@ class MMFServerManager:
                         print(f"Data length: {data_length}")
 
                         if data_length > 0 and mmf.size() >= 4 + data_length:
-                            data = mmf.read(data_length).decode("utf-8")
-                            MMFServerManager.data_queue.put(data)
+                            data = mmf.read(data_length)
+                            data = BinaryHandler.decompress_if_gzip(data)
+                            MMFServerManager.data_queue.put(data.decode("utf-8"))
                         else:
                             print("Data length exceeds the current readable size.")
                     else:
@@ -93,4 +96,5 @@ class MMFServerManager:
 
     @staticmethod
     def is_shutdown():
+        return MMFServerManager.shutdown_event.is_set()
         return MMFServerManager.shutdown_event.is_set()
