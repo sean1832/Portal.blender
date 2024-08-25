@@ -16,7 +16,7 @@ bl_info = {
     "blender": (4, 2, 0),
     "category": "System",
     "location": "View3D > Sidebar > Portal",
-    "description": "Addon for communication via IPC ",
+    "description": "Data communication via IPC ",
     "tracker_url": "https://github.com/sean1832/portal.blender/issues",
     "doc_url": "https://github.com/sean1832/portal.blender",
     "support": "TESTING",
