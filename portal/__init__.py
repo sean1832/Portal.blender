@@ -141,6 +141,7 @@ class DependencyWarningPanel(bpy.types.Panel):
     bl_category = "Portal"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_idname = "PORTAL_PT_DependencyWarningPanel"
 
     @classmethod
     def poll(cls, context):
@@ -168,9 +169,9 @@ class PortalPipePreferences(bpy.types.AddonPreferences):
 
 
 def register_dependencies():
-    bpy.utils.register_class(DependencyWarningPanel)
-    bpy.utils.register_class(InstallDependenciesOperator)
-    bpy.utils.register_class(PortalPipePreferences)
+    safe_register_class(DependencyWarningPanel)
+    safe_register_class(InstallDependenciesOperator)
+    safe_register_class(PortalPipePreferences)
 
     try:
         for dependency in dependencies:
@@ -183,14 +184,28 @@ def register_dependencies():
 
 
 def unregister_dependencies():
-    bpy.utils.unregister_class(DependencyWarningPanel)
-    bpy.utils.unregister_class(InstallDependenciesOperator)
-    bpy.utils.unregister_class(PortalPipePreferences)
+    safe_unregister_class(DependencyWarningPanel)
+    safe_unregister_class(InstallDependenciesOperator)
+    safe_unregister_class(PortalPipePreferences)
 
 
 # *************************************
 # Install Dependencies
 # *************************************
+
+registered_classes = set()
+
+
+def safe_register_class(cls):
+    if cls not in registered_classes:
+        bpy.utils.register_class(cls)
+        registered_classes.add(cls)
+
+
+def safe_unregister_class(cls):
+    if cls in registered_classes:
+        bpy.utils.unregister_class(cls)
+        registered_classes.remove(cls)
 
 
 def register():
@@ -201,7 +216,7 @@ def register():
 
 
 def unregister():
-    bpy.utils.unregister_class(RestartBlenderOperator)
+    safe_unregister_class(RestartBlenderOperator)
     if DependencyManager.are_dependencies_installed():
         unregister_operators()
         unregister_panels()

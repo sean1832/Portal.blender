@@ -68,14 +68,28 @@ class ModalOperator(bpy.types.Operator):
         context.window_manager.event_timer_remove(self._timer)
 
 
+registered_classes = set()
+
+
+def safe_register_class(cls):
+    if cls not in registered_classes:
+        bpy.utils.register_class(cls)
+        registered_classes.add(cls)
+
+
+def safe_unregister_class(cls):
+    if cls in registered_classes:
+        bpy.utils.unregister_class(cls)
+        registered_classes.remove(cls)
+
+
 def register_operators():
-    bpy.utils.register_class(StartServerOperator)
-    bpy.utils.register_class(StopServerOperator)
-    bpy.utils.register_class(ModalOperator)
+    safe_register_class(StartServerOperator)
+    safe_register_class(StopServerOperator)
+    safe_register_class(ModalOperator)
 
 
 def unregister_operators():
-    bpy.utils.unregister_class(StartServerOperator)
-    bpy.utils.unregister_class(StopServerOperator)
-    bpy.utils.unregister_class(ModalOperator)
-    bpy.utils.unregister_class(ModalOperator)
+    safe_unregister_class(StartServerOperator)
+    safe_unregister_class(StopServerOperator)
+    safe_unregister_class(ModalOperator)
