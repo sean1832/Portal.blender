@@ -1,11 +1,14 @@
 import bpy  # type: ignore
 
-from .server.mmap_server import MMFServerManager  # Adjust the import path as necessary
-from .server.pipe_server import PipeServerManager  # Adjust the import path as necessary
+from .server.mmap_server import MMFServerManager
+from .server.pipe_server import PipeServerManager
+from .server.websockets_server import WebSocketServerManager
 
 CONNECTION_TYPES = {
     "NAMED_PIPE": PipeServerManager,
     "MMAP": MMFServerManager,
+    "WEBSOCKETS": WebSocketServerManager,
+    # "UDP": UDPServerManager,
 }
 
 
@@ -19,10 +22,10 @@ def on_panel_update(self, context):
 
 def get_connection_items(self, context):
     return [
-        ("NAMED_PIPE", "Named Pipe", ""),
-        ("MMAP", "Memory Mapped File", ""),
-        ("WEBSOCKETS", "WebSockets", ""),
-        ("UDP", "UDP", ""),
+        ("NAMED_PIPE", "Named Pipe", "Local pipe stream"),
+        ("MMAP", "Memory Mapped File", "Local memory-mapped file"),
+        ("WEBSOCKETS", "WebSockets", "Local / Remote WebSockets"),
+        ("UDP", "UDP", "Local / Remote UDP"),
     ]
 
 
@@ -91,21 +94,25 @@ class ServerUIPanel(bpy.types.Panel):
     def draw_mmap(self, layout, scene):
         col = layout.column()
         col.prop(scene, "mmf_name")
-        col.prop(scene, "event_timer")
         col.prop(scene, "buffer_size")
+        col.prop(scene, "event_timer")
 
     def draw_websockets(self, layout, scene):
         col = layout.column()
         col.prop(scene, "port")
         col.prop(scene, "route")
+        col.prop(scene, "event_timer")
 
     def draw_udp(self, layout, scene):
         col = layout.column()
         col.prop(scene, "port")
+        col.prop(scene, "event_timer")
 
 
 def register_properties():
+    # default initial connection type
     register_connection_properties("NAMED_PIPE")
+
     bpy.types.Scene.data_type = bpy.props.EnumProperty(
         name="Data Type",
         items=[
@@ -128,16 +135,22 @@ def register_connection_properties(connection_type):
         )
     elif connection_type == "MMAP":
         bpy.types.Scene.mmf_name = bpy.props.StringProperty(name="Name", default="memory_file")
+        bpy.types.Scene.buffer_size = bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)
         bpy.types.Scene.event_timer = bpy.props.FloatProperty(
             name="Interval (sec)", default=0.01, min=0.001, max=1.0
         )
-        bpy.types.Scene.buffer_size = bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)
 
     elif connection_type == "WEBSOCKETS":
         bpy.types.Scene.port = bpy.props.IntProperty(name="Port", default=8765)
-        bpy.types.Scene.route = bpy.props.StringProperty(name="Route", default="/")
+        bpy.types.Scene.route = bpy.props.StringProperty(name="route", default="/")
+        bpy.types.Scene.event_timer = bpy.props.FloatProperty(
+            name="Interval (sec)", default=0.01, min=0.001, max=1.0
+        )
     elif connection_type == "UDP":
         bpy.types.Scene.port = bpy.props.IntProperty(name="Port", default=8765)
+        bpy.types.Scene.event_timer = bpy.props.FloatProperty(
+            name="Interval (sec)", default=0.01, min=0.001, max=1.0
+        )
 
 
 def unregister_connection_properties(scene):

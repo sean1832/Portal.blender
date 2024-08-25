@@ -1,19 +1,20 @@
 import queue
 
-import bpy # type: ignore
+import bpy  # type: ignore
 
 from .handlers import DataHandler
-from .server.pipe_server import PipeServerManager
 from .server.mmap_server import MMFServerManager
-
+from .server.pipe_server import PipeServerManager
+from .server.websockets_server import WebSocketServerManager
 
 # Mapping of connection types to their respective server manager classes
 SERVER_MANAGERS = {
     "NAMED_PIPE": PipeServerManager,
     "MMAP": MMFServerManager,
-    # "WEBSOCKETS": WebSocketServerManager,
+    "WEBSOCKETS": WebSocketServerManager,
     # "UDP": UDPServerManager,
 }
+
 
 class StartServerOperator(bpy.types.Operator):
     bl_idname = "portal.start_server"

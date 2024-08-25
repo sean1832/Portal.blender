@@ -4,7 +4,7 @@ import subprocess
 import sys
 from collections import namedtuple
 
-import bpy # type: ignore
+import bpy  # type: ignore
 
 from .operators import register_operators, unregister_operators
 from .panels import register_panels, unregister_panels
@@ -30,7 +30,7 @@ Dependency = namedtuple("Dependency", ["module", "package", "name"])
 
 dependencies = (
     Dependency(module="pywintypes", package="pywin32==306", name=None),
-    Dependency(module="websockets", package="websockets==12.0", name=None),
+    Dependency(module="aiohttp", package="aiohttp==3.10.5", name=None),
 )
 
 
@@ -138,7 +138,7 @@ class InstallDependenciesOperator(bpy.types.Operator):
 
 class DependencyWarningPanel(bpy.types.Panel):
     bl_label = "Dependencies Warning"
-    bl_category = "Portal Pipe"
+    bl_category = "Portal"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
