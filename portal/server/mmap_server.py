@@ -20,7 +20,9 @@ class MMFServerManager:
             while not MMFServerManager.shutdown_event.is_set():
                 mmf.seek(0)
                 if mmf.size() >= 20:
-                    hash_prefix = mmf.read(16)
+                    hash_prefix = mmf.read(16)  # md5 hash is 16 bytes
+
+                    # Check if the data is the same as the last read
                     if hash_prefix != MMFServerManager._last_hash:
                         MMFServerManager._last_hash = hash_prefix
                         length_prefix = mmf.read(4)
@@ -33,13 +35,14 @@ class MMFServerManager:
                         else:
                             print("Data length exceeds the current readable size.")
                     else:
-                        print("Data is the same as the last read.")
+                        # print("Data is the same as the last read.")
+                        pass
                 else:
                     print(
                         "Data Struct Error: Not enough data to read hash & length prefix."
                         + "\nData should follows the format: '[16b byte[] hash] [4b int32 length] [data]'"
                     )
-                time.sleep(0.1)  # Adjust as needed
+                time.sleep(bpy.context.scene.event_timer)  # Adjust as needed
         except Exception as e:
             print(f"Error in handle_mmf_data: {e}")
 
