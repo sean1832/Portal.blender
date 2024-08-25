@@ -3,17 +3,7 @@ import queue
 import bpy  # type: ignore
 
 from .handlers import DataHandler
-from .server.mmap_server import MMFServerManager
-from .server.pipe_server import PipeServerManager
-from .server.websockets_server import WebSocketServerManager
-
-# Mapping of connection types to their respective server manager classes
-SERVER_MANAGERS = {
-    "NAMED_PIPE": PipeServerManager,
-    "MMAP": MMFServerManager,
-    "WEBSOCKETS": WebSocketServerManager,
-    # "UDP": UDPServerManager,
-}
+from .managers import SERVER_MANAGERS
 
 
 class StartServerOperator(bpy.types.Operator):
@@ -87,4 +77,5 @@ def register_operators():
 def unregister_operators():
     bpy.utils.unregister_class(StartServerOperator)
     bpy.utils.unregister_class(StopServerOperator)
+    bpy.utils.unregister_class(ModalOperator)
     bpy.utils.unregister_class(ModalOperator)

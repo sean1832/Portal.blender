@@ -1,15 +1,6 @@
 import bpy  # type: ignore
 
-from .server.mmap_server import MMFServerManager
-from .server.pipe_server import PipeServerManager
-from .server.websockets_server import WebSocketServerManager
-
-CONNECTION_TYPES = {
-    "NAMED_PIPE": PipeServerManager,
-    "MMAP": MMFServerManager,
-    "WEBSOCKETS": WebSocketServerManager,
-    # "UDP": UDPServerManager,
-}
+from .managers import SERVER_MANAGERS
 
 
 def on_panel_update(self, context):
@@ -79,7 +70,7 @@ class ServerUIPanel(bpy.types.Panel):
         self.draw_status(layout, connection_type)
 
     def draw_status(self, layout, connection_type):
-        manager = CONNECTION_TYPES.get(connection_type, "NAMED_PIPE")
+        manager = SERVER_MANAGERS.get(connection_type, "NAMED_PIPE")
         status_row = layout.row()
         if manager.is_running():
             status_row.label(text="Status: Listening...", icon="RADIOBUT_ON")
