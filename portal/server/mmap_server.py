@@ -11,6 +11,7 @@ class MMFServerManager:
     data_queue = queue.Queue()
     shutdown_event = threading.Event()
     _server_thread = None
+    _last_hash = None
     mmf = None
 
     @staticmethod
@@ -18,17 +19,26 @@ class MMFServerManager:
         try:
             while not MMFServerManager.shutdown_event.is_set():
                 mmf.seek(0)
-                if mmf.size() >= 4:
-                    length_prefix = mmf.read(4)
-                    data_length = struct.unpack("I", length_prefix)[0]
+                if mmf.size() >= 20:
+                    hash_prefix = mmf.read(16)
+                    if hash_prefix != MMFServerManager._last_hash:
+                        MMFServerManager._last_hash = hash_prefix
+                        length_prefix = mmf.read(4)
+                        data_length = struct.unpack("I", length_prefix)[0]
+                        print(f"Data length: {data_length}")
 
-                    if data_length > 0 and mmf.size() >= 4 + data_length:
-                        data = mmf.read(data_length).decode("utf-8")
-                        MMFServerManager.data_queue.put(data)
+                        if data_length > 0 and mmf.size() >= 4 + data_length:
+                            data = mmf.read(data_length).decode("utf-8")
+                            MMFServerManager.data_queue.put(data)
+                        else:
+                            print("Data length exceeds the current readable size.")
                     else:
-                        print("Data length exceeds the current readable size.")
+                        print("Data is the same as the last read.")
                 else:
-                    print("Not enough data to read length prefix.")
+                    print(
+                        "Data Struct Error: Not enough data to read hash & length prefix."
+                        + "\nData should follows the format: '[16b byte[] hash] [4b int32 length] [data]'"
+                    )
                 time.sleep(0.1)  # Adjust as needed
         except Exception as e:
             print(f"Error in handle_mmf_data: {e}")
@@ -37,8 +47,8 @@ class MMFServerManager:
     def run_server():
         while not MMFServerManager.shutdown_event.is_set():
             try:
-                mmf_name = bpy.context.scene.mmf_filename
-                buffer_size = bpy.context.scene.mmf_buffer_size * 1024  # Convert KB to bytes
+                mmf_name = bpy.context.scene.mmf_name
+                buffer_size = bpy.context.scene.buffer_size * 1024  # Convert KB to bytes
                 MMFServerManager.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
                 MMFServerManager.handle_raw_bytes(MMFServerManager.mmf)
             except Exception as e:
