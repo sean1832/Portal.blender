@@ -1,6 +1,12 @@
-import bpy # type: ignore
+import bpy  # type: ignore
 
+from .server.mmap_server import MMFServerManager  # Adjust the import path as necessary
 from .server.pipe_server import PipeServerManager  # Adjust the import path as necessary
+
+CONNECTION_TYPES = {
+    "NAMED_PIPE": PipeServerManager,
+    "MMAP": MMFServerManager,
+}
 
 
 def on_panel_update(self, context):
@@ -67,8 +73,12 @@ class ServerUIPanel(bpy.types.Panel):
         row.operator("portal.stop_server", text="Stop Server", icon="PAUSE")
 
         # Server status display
+        self.draw_status(layout, connection_type)
+
+    def draw_status(self, layout, connection_type):
+        manager = CONNECTION_TYPES.get(connection_type, "NAMED_PIPE")
         status_row = layout.row()
-        if PipeServerManager.is_running():
+        if manager.is_running():
             status_row.label(text="Status: Listening...", icon="RADIOBUT_ON")
         else:
             status_row.label(text="Status: Stopped", icon="RADIOBUT_OFF")
