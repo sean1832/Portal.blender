@@ -20,6 +20,7 @@ bl_info = {
     "tracker_url": "https://github.com/sean1832/portal.blender/issues",
     "doc_url": "https://github.com/sean1832/portal.blender",
     "support": "TESTING",
+    "license": "Apache License, Version 2.0",
 }
 
 # *************************************
@@ -152,7 +153,7 @@ class DependencyWarningPanel(bpy.types.Panel):
         lines = [
             "Please install the missing dependencies.",
             "1. Open the preferences (Edit > Preferences > Add-ons).",
-            "2. Search for the 'Portal Pipe' add-on.",
+            "2. Search for the 'Portal' add-on.",
             "3. Open the details section of the add-on.",
             "4. Click on the 'Install dependencies' button.",
         ]
