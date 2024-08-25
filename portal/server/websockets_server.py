@@ -2,9 +2,15 @@ import asyncio
 import queue
 import threading
 
-import aiohttp  # type: ignore
 import bpy  # type: ignore
-from aiohttp import web  # type: ignore
+
+try:
+    import aiohttp  # type: ignore
+    from aiohttp import web  # type: ignore
+
+    DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    DEPENDENCIES_AVAILABLE = False
 
 from ..handlers import BinaryHandler
 
@@ -17,7 +23,11 @@ class WebSocketServerManager:
     _runner = None
     _site = None
 
+    @staticmethod
     async def websocket_handler(request):
+        if not DEPENDENCIES_AVAILABLE:
+            return
+
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
@@ -37,6 +47,9 @@ class WebSocketServerManager:
 
     @staticmethod
     async def run_server():
+        if not DEPENDENCIES_AVAILABLE:
+            return
+
         try:
             WebSocketServerManager._app = web.Application()
             route = bpy.context.scene.route  # blender input
@@ -61,6 +74,9 @@ class WebSocketServerManager:
 
     @staticmethod
     def start_server():
+        if not DEPENDENCIES_AVAILABLE:
+            return
+
         WebSocketServerManager.shutdown_event.clear()
         WebSocketServerManager._server_thread = threading.Thread(
             target=asyncio.run, args=(WebSocketServerManager.run_server(),), daemon=True
@@ -70,6 +86,9 @@ class WebSocketServerManager:
 
     @staticmethod
     def stop_server():
+        if not DEPENDENCIES_AVAILABLE:
+            return
+
         WebSocketServerManager.shutdown_event.set()
         if WebSocketServerManager._server_thread:
             WebSocketServerManager._server_thread.join()
@@ -77,6 +96,9 @@ class WebSocketServerManager:
 
     @staticmethod
     def is_running():
+        if not DEPENDENCIES_AVAILABLE:
+            return False
+
         return (
             WebSocketServerManager._server_thread is not None
             and WebSocketServerManager._server_thread.is_alive()
@@ -84,5 +106,7 @@ class WebSocketServerManager:
 
     @staticmethod
     def is_shutdown():
-        return WebSocketServerManager.shutdown_event.is_set()
+        if not DEPENDENCIES_AVAILABLE:
+            return True
+
         return WebSocketServerManager.shutdown_event.is_set()
