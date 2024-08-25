@@ -52,7 +52,7 @@ class ModalOperator(bpy.types.Operator):
             while not server_manager.data_queue.empty():
                 try:
                     data = server_manager.data_queue.get_nowait()
-                    DataHandler.handle_data(data, context.scene.data_type)
+                    DataHandler.handle_str_data(data, context.scene.data_type)
                 except queue.Empty:
                     break
         return {"PASS_THROUGH"}

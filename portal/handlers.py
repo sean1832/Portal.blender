@@ -5,7 +5,7 @@ import bpy  # type: ignore
 
 class DataHandler:
     @staticmethod
-    def handle_data(data, data_type):
+    def handle_str_data(data, data_type):
         try:
             if data_type == "Text":
                 print(f"Received message: {data}")
