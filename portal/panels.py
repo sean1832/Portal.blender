@@ -80,7 +80,7 @@ class ServerUIPanel(bpy.types.Panel):
 
     def draw_mmap(self, layout, scene):
         col = layout.column()
-        col.prop(scene, "mmap_name")
+        col.prop(scene, "mmf_name")
         col.prop(scene, "event_timer")
         col.prop(scene, "buffer_size")
 
@@ -117,7 +117,7 @@ def register_connection_properties(connection_type):
             name="Interval (sec)", default=0.01, min=0.001, max=1.0
         )
     elif connection_type == "MMAP":
-        bpy.types.Scene.mmap_name = bpy.props.StringProperty(name="Name", default="memory_file")
+        bpy.types.Scene.mmf_name = bpy.props.StringProperty(name="Name", default="memory_file")
         bpy.types.Scene.event_timer = bpy.props.FloatProperty(
             name="Interval (sec)", default=0.01, min=0.001, max=1.0
         )
@@ -131,7 +131,7 @@ def register_connection_properties(connection_type):
 
 
 def unregister_connection_properties(scene):
-    props_to_remove = ["pipe_name", "event_timer", "mmap_name", "port", "route"]
+    props_to_remove = ["pipe_name", "event_timer", "mmf_name", "port", "route"]
     for prop in props_to_remove:
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
