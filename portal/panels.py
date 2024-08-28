@@ -2,9 +2,11 @@ import bpy  # type: ignore
 
 from .managers import SERVER_MANAGERS
 
+
 def on_panel_update(self, context):
     unregister_connection_properties(context.scene)
     register_connection_properties(context.scene.connection_type)
+
 
 def get_connection_items(self, context):
     return [
@@ -14,25 +16,33 @@ def get_connection_items(self, context):
         ("UDP", "UDP", "Local / Remote UDP"),
     ]
 
+
 # Set to keep track of registered properties
 registered_properties = set()
+
 
 def safe_register_property(attr_name, prop):
     if attr_name not in registered_properties:
         setattr(bpy.types.Scene, attr_name, prop)
         registered_properties.add(attr_name)
 
+
 def safe_unregister_property(attr_name):
     if attr_name in registered_properties:
         delattr(bpy.types.Scene, attr_name)
         registered_properties.remove(attr_name)
 
-safe_register_property('connection_type', bpy.props.EnumProperty(
-    name="Connection Type",
-    description="Choose the type of connection",
-    items=get_connection_items,
-    update=on_panel_update,
-))
+
+safe_register_property(
+    "connection_type",
+    bpy.props.EnumProperty(
+        name="Connection Type",
+        description="Choose the type of connection",
+        items=get_connection_items,
+        update=on_panel_update,
+    ),
+)
+
 
 class ServerUIPanel(bpy.types.Panel):
     bl_label = "Portal Server"
@@ -99,72 +109,119 @@ class ServerUIPanel(bpy.types.Panel):
         col.prop(scene, "port")
         col.prop(scene, "route")
         col.prop(scene, "event_timer")
+        col.prop(scene, "is_external")
 
     def draw_udp(self, layout, scene):
         col = layout.column()
         col.prop(scene, "port")
         col.prop(scene, "event_timer")
+        col.prop(scene, "is_external")
+
 
 def register_properties():
     # default initial connection type
     register_connection_properties("NAMED_PIPE")
 
-    safe_register_property('data_type', bpy.props.EnumProperty(
-        name="Data Type",
-        items=[
-            ("Mesh", "Mesh", "Receive data as mesh"),
-            ("Text", "Text", "Receive data as text"),
-        ],
-        default="Mesh",
-    ))
+    safe_register_property(
+        "data_type",
+        bpy.props.EnumProperty(
+            name="Data Type",
+            items=[
+                ("Mesh", "Mesh", "Receive data as mesh"),
+                ("Text", "Text", "Receive data as text"),
+            ],
+            default="Mesh",
+        ),
+    )
+
 
 def unregister_properties():
-    safe_unregister_property('data_type')
+    safe_unregister_property("data_type")
+
 
 def register_connection_properties(connection_type):
     if connection_type == "NAMED_PIPE":
-        safe_register_property('pipe_name', bpy.props.StringProperty(name="Name", default="testpipe"))
-        safe_register_property('event_timer', bpy.props.FloatProperty(
-            name="Interval (sec)", default=0.01, min=0.001, max=1.0
-        ))
+        safe_register_property(
+            "pipe_name", bpy.props.StringProperty(name="Name", default="testpipe")
+        )
+        safe_register_property(
+            "event_timer",
+            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
+        )
     elif connection_type == "MMAP":
-        safe_register_property('mmf_name', bpy.props.StringProperty(name="Name", default="memory_file"))
-        safe_register_property('buffer_size', bpy.props.IntProperty(name="Buffer Size (KB)", default=1024))
-        safe_register_property('event_timer', bpy.props.FloatProperty(
-            name="Interval (sec)", default=0.01, min=0.001, max=1.0
-        ))
+        safe_register_property(
+            "mmf_name", bpy.props.StringProperty(name="Name", default="memory_file")
+        )
+        safe_register_property(
+            "buffer_size", bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)
+        )
+        safe_register_property(
+            "event_timer",
+            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
+        )
     elif connection_type == "WEBSOCKETS":
-        safe_register_property('port', bpy.props.IntProperty(name="Port", default=8765))
-        safe_register_property('route', bpy.props.StringProperty(name="route", default="/"))
-        safe_register_property('event_timer', bpy.props.FloatProperty(
-            name="Interval (sec)", default=0.01, min=0.001, max=1.0
-        ))
+        safe_register_property("port", bpy.props.IntProperty(name="Port", default=8765))
+        safe_register_property("route", bpy.props.StringProperty(name="route", default="/"))
+        safe_register_property(
+            "event_timer",
+            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
+        )
+        safe_register_property(
+            "is_external",
+            bpy.props.BoolProperty(
+                name="Listen Remote",
+                default=False,
+                description="Enable for cross-machine connections",
+            ),
+        )
     elif connection_type == "UDP":
-        safe_register_property('port', bpy.props.IntProperty(name="Port", default=8765))
-        safe_register_property('event_timer', bpy.props.FloatProperty(
-            name="Interval (sec)", default=0.01, min=0.001, max=1.0
-        ))
+        safe_register_property("port", bpy.props.IntProperty(name="Port", default=8765))
+        safe_register_property(
+            "event_timer",
+            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
+        )
+        safe_register_property(
+            "is_external",
+            bpy.props.BoolProperty(
+                name="Listen Remote",
+                default=False,
+                description="Enable for cross-machine connections",
+            ),
+        )
+
 
 def unregister_connection_properties(scene):
-    props_to_remove = ["pipe_name", "event_timer", "mmf_name", "port", "route"]
+    props_to_remove = [
+        "pipe_name",
+        "event_timer",
+        "mmf_name",
+        "port",
+        "route",
+        "is_external",
+    ]
     for prop in props_to_remove:
         safe_unregister_property(prop)
 
+
 registered_classes = set()
+
 
 def safe_register_class(cls):
     if cls not in registered_classes:
         bpy.utils.register_class(cls)
         registered_classes.add(cls)
 
+
 def safe_unregister_class(cls):
     if cls in registered_classes:
         bpy.utils.unregister_class(cls)
         registered_classes.remove(cls)
 
+
 def register_panels():
     safe_register_class(ServerUIPanel)
     register_properties()
+
 
 def unregister_panels():
     safe_unregister_class(ServerUIPanel)

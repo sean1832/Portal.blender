@@ -48,16 +48,6 @@ class PipeServerManager:
         except Exception as e:
             print(f"Error in handle_raw_bytes: {e}")
 
-    # @staticmethod
-    # def decompress_if_gzip(data: bytes) -> bytes:
-    #     if data[:2] == b"\x1f\x8b":
-    #         with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
-    #             try:
-    #                 return gz.read()
-    #             except OSError:
-    #                 return data
-    #     return data
-
     @staticmethod
     def run_server():
         if not PYWIN32_AVAILABLE:
@@ -161,5 +151,4 @@ class PipeServerManager:
     def is_shutdown():
         if not PYWIN32_AVAILABLE:
             return True
-        return PipeServerManager.shutdown_event.is_set()
         return PipeServerManager.shutdown_event.is_set()

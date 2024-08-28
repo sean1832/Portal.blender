@@ -17,8 +17,8 @@ class UDPServerManager:
     def udp_handler():
         while not UDPServerManager.shutdown_event.is_set():
             try:
-                # 1472 is the max size of a UDP packet
-                data, addr = UDPServerManager._sock.recvfrom(1472)
+                # 1500 is the max size of a UDP packet
+                data, addr = UDPServerManager._sock.recvfrom(1500)
                 data = BinaryHandler.decompress_if_gzip(data)
                 UDPServerManager.data_queue.put(data.decode("utf-8"))
             except socket.timeout:
@@ -29,7 +29,7 @@ class UDPServerManager:
     @staticmethod
     def run_server():
         try:
-            host = "localhost"
+            host = "0.0.0.0" if bpy.context.scene.is_external else "localhost"
             port = bpy.context.scene.port  # blender input
             UDPServerManager._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             UDPServerManager._sock.bind((host, port))
@@ -66,5 +66,4 @@ class UDPServerManager:
 
     @staticmethod
     def is_shutdown():
-        return UDPServerManager.shutdown_event.is_set()
         return UDPServerManager.shutdown_event.is_set()

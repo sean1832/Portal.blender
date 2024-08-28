@@ -60,7 +60,7 @@ class WebSocketServerManager:
             WebSocketServerManager._runner = web.AppRunner(WebSocketServerManager._app)
             await WebSocketServerManager._runner.setup()
 
-            host = "localhost"
+            host = "0.0.0.0" if bpy.context.scene.is_external else "localhost"
             port = bpy.context.scene.port  # blender input
             WebSocketServerManager._site = web.TCPSite(WebSocketServerManager._runner, host, port)
             await WebSocketServerManager._site.start()
@@ -108,5 +108,4 @@ class WebSocketServerManager:
     def is_shutdown():
         if not DEPENDENCIES_AVAILABLE:
             return True
-
         return WebSocketServerManager.shutdown_event.is_set()
