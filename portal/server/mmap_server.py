@@ -29,25 +29,25 @@ class MMFServerManager:
                         MMFServerManager._last_hash = hash_prefix
                         length_prefix = mmf.read(4)
                         data_length = struct.unpack("I", length_prefix)[0]
-                        print(f"Data length: {data_length}")
+                        # print(f"Data length: {data_length}")
 
                         if data_length > 0 and mmf.size() >= 4 + data_length:
                             data = mmf.read(data_length)
                             data = BinaryHandler.decompress_if_gzip(data)
                             MMFServerManager.data_queue.put(data.decode("utf-8"))
                         else:
-                            print("Data length exceeds the current readable size.")
+                            raise ValueError("Data length exceeds the current readable size.")
                     else:
                         # print("Data is the same as the last read.")
                         pass
                 else:
-                    print(
-                        "Data Struct Error: Not enough data to read hash & length prefix."
-                        + "\nData should follows the format: '[16b byte[] hash] [4b int32 length] [data]'"
+                    raise ValueError(
+                        "Not enough data to read hash & length prefix. "
+                        + "Data should follows the format: '[16b byte[] hash] [4b int32 length] [data]'"
                     )
                 time.sleep(bpy.context.scene.event_timer)  # Adjust as needed
         except Exception as e:
-            print(f"Error in handle_mmf_data: {e}")
+            raise RuntimeError(f"Error in handle_mmf_data: {e}")
 
     @staticmethod
     def run_server():
@@ -58,10 +58,10 @@ class MMFServerManager:
                 MMFServerManager.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
                 MMFServerManager.handle_raw_bytes(MMFServerManager.mmf)
             except Exception as e:
-                print(f"Error creating or handling MMF: {e}")
                 if MMFServerManager.shutdown_event.is_set():
                     break
                 time.sleep(1)
+                raise RuntimeError(f"Error creating or handling MMF: {e}")
             finally:
                 MMFServerManager.close_mmf()
 
@@ -96,5 +96,4 @@ class MMFServerManager:
 
     @staticmethod
     def is_shutdown():
-        return MMFServerManager.shutdown_event.is_set()
         return MMFServerManager.shutdown_event.is_set()

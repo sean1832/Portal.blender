@@ -46,7 +46,7 @@ class PipeServerManager:
                         break
                     raise
         except Exception as e:
-            print(f"Error in handle_raw_bytes: {e}")
+            raise RuntimeError(f"Error in handle_raw_bytes: {e}")
 
     @staticmethod
     def run_server():
@@ -99,7 +99,7 @@ class PipeServerManager:
                 if e.winerror == 233:  # no process is on the other end of the pipe
                     pass
                 else:
-                    print(f"Error disconnecting pipe: {e}")
+                    raise (f"Error disconnecting pipe: {e}")
 
             # Close the pipe handle
             win32file.CloseHandle(PipeServerManager.pipe_handle)

@@ -38,11 +38,13 @@ class WebSocketServerManager:
                     data = BinaryHandler.decompress_if_gzip(data)
                     WebSocketServerManager.data_queue.put(data.decode("utf-8"))
                 elif msg.type == aiohttp.WSMsgType.ERROR:
-                    print("WebSocket connection closed with exception %s" % ws.exception())
+                    raise RuntimeError(
+                        f"WebSocket connection closed with exception {ws.exception()}"
+                    )
                 else:
-                    print(f"Unknown message type: {msg.type}")
+                    raise ValueError(f"Unsupported message type: {msg.type}")
         except Exception as e:
-            print(f"Error in websocket_handler: {e}")
+            raise RuntimeError(f"Unhandled exception in websocket_handler: {e}")
         return ws
 
     @staticmethod
@@ -70,7 +72,7 @@ class WebSocketServerManager:
 
             await WebSocketServerManager._runner.cleanup()
         except Exception as e:
-            print(f"Error creating or handling WebSocket server: {e}")
+            raise RuntimeError(f"Error creating or handling WebSocket server: {e}")
 
     @staticmethod
     def start_server():

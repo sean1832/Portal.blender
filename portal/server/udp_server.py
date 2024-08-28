@@ -24,7 +24,7 @@ class UDPServerManager:
             except socket.timeout:
                 continue
             except Exception as e:
-                print(f"Error in udp_handler: {e}")
+                raise RuntimeError(f"Error in udp_handler: {e}")
 
     @staticmethod
     def run_server():
@@ -37,7 +37,7 @@ class UDPServerManager:
 
             UDPServerManager.udp_handler()
         except Exception as e:
-            print(f"Error creating or handling UDP server: {e}")
+            raise RuntimeError(f"Error creating or handling UDP server: {e}")
         finally:
             UDPServerManager._sock.close()
 
