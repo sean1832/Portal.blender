@@ -12,7 +12,7 @@ from .panels import register_panels, unregister_panels
 bl_info = {
     "name": "Portal",
     "author": "Zeke Zhang",
-    "version": (0, 0, 1),
+    "version": (0, 0, 2),
     "blender": (4, 2, 0),
     "category": "System",
     "location": "View3D > Sidebar > Portal",
