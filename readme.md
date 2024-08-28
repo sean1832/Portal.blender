@@ -10,6 +10,8 @@ Portal.blender is a Blender add-on that allows you to communicate data between B
 
 ### Dependencies
 If this is your first time installing the Portal add-on, you will need to install the dependencies. To do this, follow these steps:
+> [!IMPORTANT]
+> You must start blender as an administrator to install the dependencies. After the dependencies are installed, you can run Blender as a regular user. See [issue](https://github.com/sean1832/Portal.blender/issues/1).
 1. Open the preferences (Edit > Preferences > Add-ons).
 2. Search for the 'Portal' add-on.
 3. Open the details section of the add-on.
