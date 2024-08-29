@@ -1,4 +1,7 @@
 # Portal.blender
+![GitHub Release](https://img.shields.io/github/v/release/sean1832/portal.blender)
+![Static Badge](https://img.shields.io/badge/blender-4.2.0%2B-blue)
+![GitHub License](https://img.shields.io/github/license/sean1832/portal.blender)
 
 Portal.blender is a Blender add-on that allows you to communicate data between Blender and other applications using IPC. It is the Blender adaptor of the [Portal](https://github.com/sean1832/portal) project.
 
