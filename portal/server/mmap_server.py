@@ -34,6 +34,8 @@ class MMFServerManager:
                         data = mmf.read(header.Size)
                         if header.IsCompressed:
                             data = BinaryHandler.decompress(data)
+                        if header.IsEncrypted:
+                            raise NotImplementedError("Encrypted data is not supported.")
                         try:
                             decoded_data = data.decode("utf-8")
                         except UnicodeDecodeError:

@@ -43,6 +43,8 @@ class PipeServerManager:
                     data = win32file.ReadFile(pipe, header.size, None)[1]
                     if header.is_compressed:
                         data = BinaryHandler.decompress(data)
+                    if header.is_encrypted:
+                        raise NotImplementedError("Encrypted data is not supported.")
                     PipeServerManager.data_queue.put(data.decode("utf-8"))
                 except pywintypes.error as e:
                     if e.winerror == 109:  # ERROR_BROKEN_PIPE

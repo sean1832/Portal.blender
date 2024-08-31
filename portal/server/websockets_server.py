@@ -39,6 +39,8 @@ class WebSocketServerManager:
                     payload = data[header.get_expected_size() + 2 :]
                     if header.is_compressed:
                         data = BinaryHandler.decompress(payload)
+                    if header.is_encrypted:
+                        raise NotImplementedError("Encrypted data is not supported.")
                     WebSocketServerManager.data_queue.put(data.decode("utf-8"))
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     raise RuntimeError(
