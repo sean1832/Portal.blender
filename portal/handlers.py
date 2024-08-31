@@ -14,7 +14,9 @@ class BinaryHandler:
     @staticmethod
     def parse_header(data: bytes) -> PacketHeader:
         # see https://docs.python.org/3/library/struct.html#format-characters
-        is_compressed, is_encrypted, checksum, size = struct.unpack("??Hi", data)
+        is_compressed, is_encrypted, checksum, size = struct.unpack(
+            "??Hi", data[: PacketHeader.get_expected_size()]
+        )
         return PacketHeader(is_encrypted, is_compressed, size, checksum)
 
     @staticmethod

@@ -5,7 +5,7 @@ import time
 
 import bpy  # type: ignore
 
-from ..data_struct.packet import Packet
+from ..data_struct.packet import Packet, PacketHeader
 from ..handlers import BinaryHandler
 
 
@@ -23,7 +23,7 @@ class MMFServerManager:
                 mmf.seek(0)
                 if mmf.size() >= 10:
                     Packet.validate_magic_number(mmf.read(2))
-                    header = BinaryHandler.parse_header(mmf.read(8))
+                    header = BinaryHandler.parse_header(mmf.read(PacketHeader.get_expected_size()))
                     checksum = header.Checksum
                     # Only process data if checksum is different from the last one
                     if checksum != MMFServerManager._last_checksum:
