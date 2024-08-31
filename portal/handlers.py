@@ -24,10 +24,10 @@ class BinaryHandler:
         if not data[:2] == b"\x1f\x8b":
             raise ValueError("Data is not in gzip format.")
         with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
-                try:
-                    return gz.read()
-                except OSError:
-                    return data
+            try:
+                return gz.read()
+            except OSError:
+                return data
 
 
 class DataHandler:
