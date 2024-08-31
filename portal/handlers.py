@@ -26,7 +26,7 @@ class DataHandler:
             elif data_type == "Mesh":
                 message_dics = json.loads(data)
                 for i, item in enumerate(message_dics):
-                    vertices, faces, uvs = MeshHandler.deserialize_mesh(item)
+                    vertices, faces = MeshHandler.deserialize_mesh(item)
                     MeshHandler.create_or_replace_mesh(f"object_{i}", vertices, faces)
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported data: {data}")
@@ -37,8 +37,7 @@ class MeshHandler:
     def deserialize_mesh(data):
         vertices = [(v["X"], v["Y"], v["Z"]) for v in data["Vertices"]]
         faces = [tuple(face_list) for face_list in data["Faces"]]
-        uvs = [(uv["X"], uv["Y"]) for uv in data["UVs"]]
-        return vertices, faces, uvs
+        return vertices, faces
 
     @staticmethod
     def create_or_replace_mesh(object_name, vertices, faces):
