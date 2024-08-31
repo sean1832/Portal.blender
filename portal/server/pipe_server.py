@@ -41,8 +41,9 @@ class PipeServerManager:
                     header = BinaryHandler.parse_header(header_bytes)
 
                     data = win32file.ReadFile(pipe, header.size, None)[1]
-                    data = BinaryHandler.decompress_if_gzip(data).decode("utf-8")
-                    PipeServerManager.data_queue.put(data)
+                    if header.is_compressed:
+                        data = BinaryHandler.decompress(data)
+                    PipeServerManager.data_queue.put(data.decode("utf-8"))
                 except pywintypes.error as e:
                     if e.winerror == 109:  # ERROR_BROKEN_PIPE
                         break

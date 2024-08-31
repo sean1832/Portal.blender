@@ -32,7 +32,8 @@ class MMFServerManager:
                         )
                         MMFServerManager._last_checksum = checksum
                         data = mmf.read(header.Size)
-                        data = BinaryHandler.decompress_if_gzip(data)
+                        if header.IsCompressed:
+                            data = BinaryHandler.decompress(data)
                         try:
                             decoded_data = data.decode("utf-8")
                         except UnicodeDecodeError:

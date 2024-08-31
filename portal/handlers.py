@@ -20,14 +20,14 @@ class BinaryHandler:
         return PacketHeader(is_encrypted, is_compressed, size, checksum)
 
     @staticmethod
-    def decompress_if_gzip(data: bytes) -> bytes:
-        if data[:2] == b"\x1f\x8b":
-            with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
+    def decompress(data: bytes) -> bytes:
+        if not data[:2] == b"\x1f\x8b":
+            raise ValueError("Data is not in gzip format.")
+        with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
                 try:
                     return gz.read()
                 except OSError:
                     return data
-        return data
 
 
 class DataHandler:

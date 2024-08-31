@@ -37,7 +37,8 @@ class WebSocketServerManager:
                     data = msg.data
                     header = BinaryHandler.parse_header(data)
                     payload = data[header.get_expected_size() + 2 :]
-                    data = BinaryHandler.decompress_if_gzip(payload)
+                    if header.is_compressed:
+                        data = BinaryHandler.decompress(payload)
                     WebSocketServerManager.data_queue.put(data.decode("utf-8"))
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     raise RuntimeError(
