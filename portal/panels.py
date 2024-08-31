@@ -75,6 +75,7 @@ class ServerUIPanel(bpy.types.Panel):
 
         # Data type selection
         layout.prop(scene, "data_type")
+        layout.prop(scene, "event_timer")
 
         # Start/Stop server buttons
         row = layout.row(align=True)
@@ -96,32 +97,31 @@ class ServerUIPanel(bpy.types.Panel):
     def draw_named_pipe(self, layout, scene):
         col = layout.column()
         col.prop(scene, "pipe_name")
-        col.prop(scene, "event_timer")
 
     def draw_mmap(self, layout, scene):
         col = layout.column()
         col.prop(scene, "mmf_name")
         col.prop(scene, "buffer_size")
-        col.prop(scene, "event_timer")
 
     def draw_websockets(self, layout, scene):
         col = layout.column()
         col.prop(scene, "port")
         col.prop(scene, "route")
-        col.prop(scene, "event_timer")
         col.prop(scene, "is_external")
 
     def draw_udp(self, layout, scene):
         col = layout.column()
         col.prop(scene, "port")
-        col.prop(scene, "event_timer")
         col.prop(scene, "is_external")
 
 
 def register_properties():
     # default initial connection type
     register_connection_properties("NAMED_PIPE")
-
+    safe_register_property(
+        "event_timer",
+        bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
+    )
     safe_register_property(
         "data_type",
         bpy.props.EnumProperty(
@@ -137,16 +137,13 @@ def register_properties():
 
 def unregister_properties():
     safe_unregister_property("data_type")
+    safe_unregister_property("event_timer")
 
 
 def register_connection_properties(connection_type):
     if connection_type == "NAMED_PIPE":
         safe_register_property(
             "pipe_name", bpy.props.StringProperty(name="Name", default="testpipe")
-        )
-        safe_register_property(
-            "event_timer",
-            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
         )
     elif connection_type == "MMAP":
         safe_register_property(
@@ -155,17 +152,9 @@ def register_connection_properties(connection_type):
         safe_register_property(
             "buffer_size", bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)
         )
-        safe_register_property(
-            "event_timer",
-            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
-        )
     elif connection_type == "WEBSOCKETS":
         safe_register_property("port", bpy.props.IntProperty(name="Port", default=8765))
         safe_register_property("route", bpy.props.StringProperty(name="route", default="/"))
-        safe_register_property(
-            "event_timer",
-            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
-        )
         safe_register_property(
             "is_external",
             bpy.props.BoolProperty(
@@ -176,10 +165,6 @@ def register_connection_properties(connection_type):
         )
     elif connection_type == "UDP":
         safe_register_property("port", bpy.props.IntProperty(name="Port", default=8765))
-        safe_register_property(
-            "event_timer",
-            bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0),
-        )
         safe_register_property(
             "is_external",
             bpy.props.BoolProperty(
@@ -193,7 +178,6 @@ def register_connection_properties(connection_type):
 def unregister_connection_properties(scene):
     props_to_remove = [
         "pipe_name",
-        "event_timer",
         "mmf_name",
         "port",
         "route",
