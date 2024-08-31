@@ -108,7 +108,6 @@ class MeshHandler:
 
         # Assign material if provided
         if material:
-            print(f"Applying material '{material}' to object '{object_name}'")
             MeshHandler.apply_material(obj, material)
 
         new_mesh_data.update()
