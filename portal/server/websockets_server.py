@@ -35,7 +35,9 @@ class WebSocketServerManager:
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.BINARY:
                     data = msg.data
-                    data = BinaryHandler.decompress_if_gzip(data)
+                    header = BinaryHandler.parse_header(data)
+                    payload = data[header.get_expected_size() + 2 :]
+                    data = BinaryHandler.decompress_if_gzip(payload)
                     WebSocketServerManager.data_queue.put(data.decode("utf-8"))
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     raise RuntimeError(

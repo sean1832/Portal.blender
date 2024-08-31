@@ -19,7 +19,9 @@ class UDPServerManager:
             try:
                 # 1500 is the max size of a UDP packet
                 data, addr = UDPServerManager._sock.recvfrom(1500)
-                data = BinaryHandler.decompress_if_gzip(data)
+                header = BinaryHandler.parse_header(data)
+                payload = data[header.get_expected_size() + 2 :]
+                data = BinaryHandler.decompress_if_gzip(payload)
                 UDPServerManager.data_queue.put(data.decode("utf-8"))
             except socket.timeout:
                 continue

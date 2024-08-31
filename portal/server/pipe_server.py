@@ -1,10 +1,10 @@
 import queue
-import struct
 import threading
 import time
 
 import bpy  # type: ignore
 
+from ..data_struct.packet import Packet, PacketHeader
 from ..handlers import BinaryHandler
 
 # Attempt to import the pywin32 modules safely
@@ -33,12 +33,14 @@ class PipeServerManager:
         try:
             while not PipeServerManager.shutdown_event.is_set():
                 try:
-                    size_prefix = win32file.ReadFile(pipe, 4, None)[1]
-                    (size,) = struct.unpack("I", size_prefix)
-                    if size == 0:
-                        break
+                    signature = win32file.ReadFile(pipe, 2, None)[1]
+                    Packet.validate_magic_number(signature)
+                    header_bytes = win32file.ReadFile(pipe, PacketHeader.get_expected_size(), None)[
+                        1
+                    ]
+                    header = BinaryHandler.parse_header(header_bytes)
 
-                    data = win32file.ReadFile(pipe, size, None)[1]
+                    data = win32file.ReadFile(pipe, header.size, None)[1]
                     data = BinaryHandler.decompress_if_gzip(data).decode("utf-8")
                     PipeServerManager.data_queue.put(data)
                 except pywintypes.error as e:
