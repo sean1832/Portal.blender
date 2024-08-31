@@ -44,8 +44,9 @@ class DataHandler:
                     data, metadata = DataHandler.unpack_packet(item)
                     vertices, faces, colors = MeshHandler.deserialize_mesh(data)
                     object_name = DataHandler.try_get_name(metadata)
+                    material = DataHandler.try_get_material(metadata)
                     MeshHandler.create_or_replace_mesh(
-                        f"{object_name}_{i}", vertices, faces, colors
+                        f"{object_name}_{i}", vertices, faces, colors, material
                     )
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported data: {payload}")
@@ -61,6 +62,12 @@ class DataHandler:
             return metadata["Name"]
         except Exception:
             return "object"
+
+    def try_get_material(metadata: str) -> str | None:
+        try:
+            return metadata["Material"]
+        except Exception:
+            return None
 
 
 class MeshHandler:
@@ -80,7 +87,7 @@ class MeshHandler:
             raise ValueError(f"Unsupported mesh data structure: {data}")
 
     @staticmethod
-    def create_or_replace_mesh(object_name, vertices, faces, vertex_colors=None):
+    def create_or_replace_mesh(object_name, vertices, faces, vertex_colors=None, material=None):
         obj = bpy.data.objects.get(object_name)
         new_mesh_data = bpy.data.meshes.new(f"{object_name}_mesh")
         new_mesh_data.from_pydata(vertices, [], faces)
@@ -93,20 +100,45 @@ class MeshHandler:
         else:
             new_object = bpy.data.objects.new(object_name, new_mesh_data)
             bpy.context.collection.objects.link(new_object)
+            obj = new_object
 
         # Assign vertex colors if provided
         if vertex_colors:
-            if not new_mesh_data.vertex_colors:
-                new_mesh_data.vertex_colors.new()
+            MeshHandler.apply_vertex_colors(new_mesh_data, vertex_colors)
 
-            color_layer = new_mesh_data.vertex_colors.active
-            color_dict = {i: col for i, col in enumerate(vertex_colors)}
-
-            for poly in new_mesh_data.polygons:
-                for idx in poly.loop_indices:
-                    loop = new_mesh_data.loops[idx]
-                    vertex_index = loop.vertex_index
-                    if vertex_index in color_dict:
-                        color_layer.data[idx].color = color_dict[vertex_index]
+        # Assign material if provided
+        if material:
+            print(f"Applying material '{material}' to object '{object_name}'")
+            MeshHandler.apply_material(obj, material)
 
         new_mesh_data.update()
+
+    @staticmethod
+    def apply_vertex_colors(mesh_data, vertex_colors):
+        if not mesh_data.vertex_colors:
+            mesh_data.vertex_colors.new()
+
+        color_layer = mesh_data.vertex_colors.active
+        color_dict = {i: col for i, col in enumerate(vertex_colors)}
+
+        for poly in mesh_data.polygons:
+            for idx in poly.loop_indices:
+                loop = mesh_data.loops[idx]
+                vertex_index = loop.vertex_index
+                if vertex_index in color_dict:
+                    color_layer.data[idx].color = color_dict[vertex_index]
+
+    @staticmethod
+    def apply_material(obj, material):
+        mat = bpy.data.materials.get(material)
+        if mat:
+            # if the object has no material slots, add one
+            if len(obj.data.materials) == 0:
+                obj.data.materials.append(mat)
+            else:
+                obj.data.materials[0] = mat
+
+            return True
+        else:
+            print(f"Material {material} not found.")
+            return False
