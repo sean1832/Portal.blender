@@ -7,6 +7,13 @@ Portal.blender is a Blender add-on that allows you to communicate data between B
 
 ![image](/doc/images/portal-server-panel.png)
 
+## Compatibility
+| Portal.blender                                                           | Portal.Gh                                                                                                                                      |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`0.0.3`](https://github.com/sean1832/Portal.blender/releases/tag/0.0.3) | [`0.3.1`](https://github.com/sean1832/Portal/releases/tag/0.3.1), [`0.3.0 pre-release`](https://github.com/sean1832/Portal/releases/tag/0.3.0) |
+| `0.0.2`                                                                  | `0.2.0`, `0.1.2`, `0.1.1`                                                                                                                      |
+| `0.0.1`                                                                  | `0.2.0`, `0.1.2`, `0.1.1`                                                                                                                      |
+
 ## Installation
 - Download the latest release from the [releases page](https://github.com/sean1832/Portal.blender/releases/latest).
 - Drag and drop the zip file into Blender to install.
