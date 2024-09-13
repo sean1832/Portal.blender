@@ -39,7 +39,7 @@ class DataHandler:
             if data_type == "Text":
                 print(f"Received message: {payload}")
             elif data_type == "Mesh":
-                message_dics = json.loads(payload)
+                message_dics, global_metadata = DataHandler.unpack_packet(json.loads(payload))
                 for i, item in enumerate(message_dics):
                     data, metadata = DataHandler.unpack_packet(item)
                     vertices, faces, colors = MeshHandler.deserialize_mesh(data)
@@ -58,7 +58,7 @@ class DataHandler:
 
     def unpack_packet(packet: str) -> Tuple[str, str]:
         try:
-            return packet["Data"], packet["Metadata"]
+            return packet["Items"], packet["Meta"]
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported packet data: {packet}")
 
