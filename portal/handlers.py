@@ -46,7 +46,12 @@ class DataHandler:
                     object_name = DataHandler.try_get_name(metadata)
                     material = DataHandler.try_get_material(metadata)
                     MeshHandler.create_or_replace_mesh(
-                        f"{object_name}_{i}", vertices, faces, colors, material
+                        f"{object_name}_{i}",
+                        vertices,
+                        faces,
+                        colors,
+                        material,
+                        collection_name="Imported",
                     )
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported data: {payload}")
@@ -87,7 +92,17 @@ class MeshHandler:
             raise ValueError(f"Unsupported mesh data structure: {data}")
 
     @staticmethod
-    def create_or_replace_mesh(object_name, vertices, faces, vertex_colors=None, material=None):
+    def create_or_replace_mesh(
+        object_name, vertices, faces, vertex_colors=None, material=None, collection_name=None
+    ):
+        # Check if the collection_name is provided and if the collection exists, if not, create it
+        collection = None
+        if collection_name:
+            collection = bpy.data.collections.get(collection_name)
+            if not collection:
+                collection = bpy.data.collections.new(collection_name)
+                bpy.context.scene.collection.children.link(collection)
+
         obj = bpy.data.objects.get(object_name)
         new_mesh_data = bpy.data.meshes.new(f"{object_name}_mesh")
         new_mesh_data.from_pydata(vertices, [], faces)
@@ -99,7 +114,12 @@ class MeshHandler:
             bpy.data.meshes.remove(old_mesh)
         else:
             new_object = bpy.data.objects.new(object_name, new_mesh_data)
-            bpy.context.collection.objects.link(new_object)
+            if collection:
+                collection.objects.link(new_object)  # Link to the specified collection
+            else:
+                bpy.context.collection.objects.link(
+                    new_object
+                )  # Link to the current context collection
             obj = new_object
 
         # Assign vertex colors if provided
@@ -109,8 +129,6 @@ class MeshHandler:
         # Assign material if provided
         if material:
             MeshHandler.apply_material(obj, material)
-
-        new_mesh_data.update()
 
     @staticmethod
     def apply_vertex_colors(mesh_data, vertex_colors):
