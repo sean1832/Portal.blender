@@ -6,8 +6,7 @@ from collections import namedtuple
 
 import bpy  # type: ignore
 
-from .operators import register_operators, unregister_operators
-from .panels import register_panels, unregister_panels
+from .ui.panel import register_ui, unregister_ui
 
 bl_info = {
     "name": "Portal",
@@ -127,12 +126,6 @@ class InstallDependenciesOperator(bpy.types.Operator):
         bpy.utils.register_class(RestartBlenderOperator)
         bpy.ops.wm.restart_blender_dialog("INVOKE_DEFAULT")
 
-        # from .operators import register_operators
-        # from .panels import register_panels
-
-        # register_operators()
-        # register_panels()
-
         return {"FINISHED"}
 
 
@@ -211,15 +204,13 @@ def safe_unregister_class(cls):
 def register():
     register_dependencies()
     if DependencyManager.are_dependencies_installed():
-        register_operators()
-        register_panels()
+        register_ui()
 
 
 def unregister():
     safe_unregister_class(RestartBlenderOperator)
     if DependencyManager.are_dependencies_installed():
-        unregister_operators()
-        unregister_panels()
+        unregister_ui()
     unregister_dependencies()
 
 
