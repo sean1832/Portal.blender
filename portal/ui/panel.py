@@ -44,7 +44,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
 
     def execute(self, context):
         new_connection = context.scene.portal_connections.add()
-        new_connection.name = f"connection-{len(context.scene.portal_connections)}"
+        new_connection.name = f"channel-{len(context.scene.portal_connections)}"
         new_connection.port = 6000 + len(context.scene.portal_connections) - 1
         return {"FINISHED"}
 
@@ -146,6 +146,13 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
 
             # Main row with name, start/stop button, and remove button
             row = box.row()
+            row.prop(
+                connection,
+                "show_details",
+                icon="TRIA_DOWN" if connection.show_details else "TRIA_RIGHT",
+                emboss=False,
+                text="",
+            )
             row.prop(connection, "name", text="")
             row.operator(
                 "portal.toggle_server",
@@ -153,17 +160,6 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 icon="PLAY" if not connection.running else "PAUSE",
             ).index = index
             row.operator("portal.remove_connection", text="", icon="X").index = index
-
-            # Collapsible section for connection details
-            row = box.row()
-            row.alignment = "LEFT"  # Align the text to the left
-            row.prop(
-                connection,
-                "show_details",
-                icon="TRIA_DOWN" if connection.show_details else "TRIA_RIGHT",
-                emboss=False,
-                text="Show Details",
-            )
 
             if connection.show_details:
                 # split layout into left and right for detailed settings
