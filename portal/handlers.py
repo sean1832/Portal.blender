@@ -32,7 +32,7 @@ class BinaryHandler:
                 return data
 
 
-class DataHandler:
+class StringHandler:
     @staticmethod
     def handle_str_data(payload, data_type):
         if payload is None:
@@ -45,10 +45,10 @@ class DataHandler:
                 DataHandler.handle_camera(global_metadata)  # set camera properties if available
 
                 for i, item in enumerate(message_dics):
-                    data, metadata = DataHandler.unpack_packet(item)
+                    data, metadata = StringHandler.unpack_packet(item)
                     vertices, faces, colors = MeshHandler.deserialize_mesh(data)
-                    object_name = DataHandler.try_get_name(metadata)
-                    material = DataHandler.try_get_material(metadata)
+                    object_name = StringHandler.try_get_name(metadata)
+                    material = StringHandler.try_get_material(metadata)
                     MeshHandler.create_or_replace_mesh(
                         f"{object_name}_{i}",
                         vertices,
