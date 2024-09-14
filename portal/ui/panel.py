@@ -158,6 +158,7 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 "portal.toggle_server",
                 text="Start" if not connection.running else "Stop",
                 icon="PLAY" if not connection.running else "PAUSE",
+                depress=True if connection.running else False,  # Highlight button if running
             ).index = index
             row.operator("portal.remove_connection", text="", icon="X").index = index
 
