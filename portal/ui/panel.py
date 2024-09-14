@@ -34,6 +34,7 @@ class PortalConnection(bpy.types.PropertyGroup):
     )  # type: ignore
     event_timer: bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0)  # type: ignore
     running: bpy.props.BoolProperty(name="Running", default=False)  # type: ignore
+    show_details: bpy.props.BoolProperty(name="Show Details", default=False)  # type: ignore
 
 
 # Operator to add new connection
@@ -43,7 +44,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
 
     def execute(self, context):
         new_connection = context.scene.portal_connections.add()
-        new_connection.name = f"Connection-{len(context.scene.portal_connections)}"
+        new_connection.name = f"connection-{len(context.scene.portal_connections)}"
         return {"FINISHED"}
 
 
@@ -138,6 +139,8 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
         # List of connections
         for index, connection in enumerate(scene.portal_connections):
             box = layout.box()
+
+            # Main row with name, start/stop button, and remove button
             row = box.row()
             row.prop(connection, "name", text="")
             row.operator(
@@ -147,22 +150,51 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
             ).index = index
             row.operator("portal.remove_connection", text="", icon="X").index = index
 
-            # Connection settings based on type
-            box.prop(connection, "connection_type")
-            if connection.connection_type == "NAMED_PIPE":
-                box.prop(connection, "name", text="Pipe Name")
-            elif connection.connection_type == "MMAP":
-                box.prop(connection, "name", text="MMAP Name")
-                box.prop(connection, "buffer_size")
-            elif connection.connection_type == "WEBSOCKETS":
-                box.prop(connection, "port")
-                box.prop(connection, "route")
-                box.prop(connection, "is_external")
-            elif connection.connection_type == "UDP":
-                box.prop(connection, "port")
-                box.prop(connection, "is_external")
-            box.prop(connection, "data_type")
-            box.prop(connection, "event_timer")
+            # Collapsible section for connection details
+            row = box.row()
+            row.alignment = "LEFT"  # Align the text to the left
+            row.prop(
+                connection,
+                "show_details",
+                icon="TRIA_DOWN" if connection.show_details else "TRIA_RIGHT",
+                emboss=False,
+                text="Show Details",
+            )
+
+            if connection.show_details:
+                # split layout into left and right for detailed settings
+                split = box.split(factor=0.35)
+                col_left = split.column()
+                col_right = split.column()
+
+                # Connection settings based on type
+                col_left.label(text="Connection")
+                col_right.prop(connection, "connection_type", text="")
+                if connection.connection_type == "NAMED_PIPE":
+                    col_left.label(text="Pipe Name")
+                    col_right.prop(connection, "name", text="")
+                elif connection.connection_type == "MMAP":
+                    col_left.label(text="MMAP Name")
+                    col_right.prop(connection, "name", text="")
+                    col_left.label(text="Buffer Size (KB)")
+                    col_right.prop(connection, "buffer_size", text="")
+                elif connection.connection_type == "WEBSOCKETS":
+                    col_left.label(text="Port")
+                    col_right.prop(connection, "port", text="")
+                    col_left.label(text="Route")
+                    col_right.prop(connection, "route", text="")
+                    col_left.label(text="Remote")
+                    col_right.prop(connection, "is_external", text="")
+                elif connection.connection_type == "UDP":
+                    col_left.label(text="Port")
+                    col_right.prop(connection, "port", text="")
+                    col_left.label(text="Remote")
+                    col_right.prop(connection, "is_external", text="")
+
+                col_left.label(text="Data Type")
+                col_right.prop(connection, "data_type", text="")
+
+                box.prop(connection, "event_timer")
 
         layout.operator("portal.add_connection", text="Add New Connection", icon="ADD")
 
