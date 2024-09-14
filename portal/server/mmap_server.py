@@ -10,28 +10,31 @@ from ..handlers import BinaryHandler
 
 
 class MMFServerManager:
-    data_queue = queue.Queue()
-    shutdown_event = threading.Event()
-    _server_thread = None
-    _last_checksum = None
-    mmf = None
+    def __init__(self, index):
+        self.index = index
+        self.data_queue = queue.Queue()
+        self.shutdown_event = threading.Event()
+        self._server_thread = None
+        self._last_checksum = None
+        self.mmf = None
 
-    @staticmethod
-    def handle_raw_bytes(mmf):
+    def handle_raw_bytes(self):
         try:
-            while not MMFServerManager.shutdown_event.is_set():
-                mmf.seek(0)
-                if mmf.size() >= 10:
-                    Packet.validate_magic_number(mmf.read(2))
-                    header = BinaryHandler.parse_header(mmf.read(PacketHeader.get_expected_size()))
+            while not self.shutdown_event.is_set():
+                self.mmf.seek(0)
+                if self.mmf.size() >= 10:
+                    Packet.validate_magic_number(self.mmf.read(2))
+                    header = BinaryHandler.parse_header(
+                        self.mmf.read(PacketHeader.get_expected_size())
+                    )
                     checksum = header.Checksum
                     # Only process data if checksum is different from the last one
-                    if checksum != MMFServerManager._last_checksum:
+                    if checksum != self._last_checksum:
                         print(
                             f"isCompressed: {header.IsCompressed}, isEncrypted: {header.IsEncrypted}, checksum: {checksum}, size: {header.Size}"
                         )
-                        MMFServerManager._last_checksum = checksum
-                        data = mmf.read(header.Size)
+                        self._last_checksum = checksum
+                        data = self.mmf.read(header.Size)
                         if header.IsCompressed:
                             data = BinaryHandler.decompress(data)
                         if header.IsEncrypted:
@@ -40,8 +43,8 @@ class MMFServerManager:
                             decoded_data = data.decode("utf-8")
                         except UnicodeDecodeError:
                             raise ValueError("Received data cannot be decoded as UTF-8.")
-                        MMFServerManager.data_queue.put(decoded_data)
-                    time.sleep(bpy.context.scene.event_timer)
+                        self.data_queue.put(decoded_data)
+                    time.sleep(bpy.context.scene.portal_connections[self.index].event_timer)
                 else:
                     raise ValueError(
                         "Not enough data to read hash & length prefix. "
@@ -53,51 +56,42 @@ class MMFServerManager:
         except Exception as e:
             raise RuntimeError(f"Error in handle_mmf_data: {e}")
 
-    @staticmethod
-    def run_server():
-        while not MMFServerManager.shutdown_event.is_set():
+    def run_server(self):
+        while not self.shutdown_event.is_set():
             try:
-                mmf_name = bpy.context.scene.mmf_name
-                buffer_size = bpy.context.scene.buffer_size * 1024  # Convert KB to bytes
-                MMFServerManager.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
-                MMFServerManager.handle_raw_bytes(MMFServerManager.mmf)
+                connection = bpy.context.scene.portal_connections[self.index]
+                mmf_name = connection.name
+                buffer_size = connection.buffer_size * 1024  # Convert KB to bytes
+                self.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
+                self.handle_raw_bytes()
             except Exception as e:
-                if MMFServerManager.shutdown_event.is_set():
+                if self.shutdown_event.is_set():
                     break
                 time.sleep(1)
                 raise RuntimeError(f"Error creating or handling MMF: {e}")
             finally:
-                MMFServerManager.close_mmf()
+                self.close_mmf()
 
-    @staticmethod
-    def close_mmf():
-        if MMFServerManager.mmf:
-            MMFServerManager.mmf.close()
-            MMFServerManager.mmf = None
+    def close_mmf(self):
+        if self.mmf:
+            self.mmf.close()
+            self.mmf = None
 
-    @staticmethod
-    def start_server():
-        MMFServerManager.shutdown_event.clear()
-        MMFServerManager._server_thread = threading.Thread(
-            target=MMFServerManager.run_server, daemon=True
-        )
-        MMFServerManager._server_thread.start()
-        print("MMF server started...")
+    def start_server(self):
+        self.shutdown_event.clear()
+        self._server_thread = threading.Thread(target=self.run_server, daemon=True)
+        self._server_thread.start()
+        print(f"MMF server started for connection index: {self.index}")
 
-    @staticmethod
-    def stop_server():
-        MMFServerManager.shutdown_event.set()
-        if MMFServerManager._server_thread:
-            MMFServerManager._server_thread.join()
-        print("MMF server stopped...")
+    def stop_server(self):
+        self.shutdown_event.set()
+        if self._server_thread:
+            self._server_thread.join()
+        self.close_mmf()
+        print(f"MMF server stopped for connection index: {self.index}")
 
-    @staticmethod
-    def is_running():
-        return (
-            MMFServerManager._server_thread is not None
-            and MMFServerManager._server_thread.is_alive()
-        )
+    def is_running(self):
+        return self._server_thread is not None and self._server_thread.is_alive()
 
-    @staticmethod
-    def is_shutdown():
-        return MMFServerManager.shutdown_event.is_set()
+    def is_shutdown(self):
+        return self.shutdown_event.is_set()

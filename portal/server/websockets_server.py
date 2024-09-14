@@ -12,19 +12,21 @@ try:
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
 
+from ..data_struct.packet import Packet
 from ..handlers import BinaryHandler
 
 
 class WebSocketServerManager:
-    data_queue = queue.Queue()
-    shutdown_event = threading.Event()
-    _server_thread = None
-    _app = None
-    _runner = None
-    _site = None
+    def __init__(self, index):
+        self.index = index
+        self.data_queue = queue.Queue()
+        self.shutdown_event = threading.Event()
+        self._server_thread = None
+        self._app = None
+        self._runner = None
+        self._site = None
 
-    @staticmethod
-    async def websocket_handler(request):
+    async def websocket_handler(self, request):
         if not DEPENDENCIES_AVAILABLE:
             return
 
@@ -34,14 +36,15 @@ class WebSocketServerManager:
         try:
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.BINARY:
-                    data = msg.data
-                    header = BinaryHandler.parse_header(data)
-                    payload = data[header.get_expected_size() + 2 :]
+                    raw_data = msg.data
+                    Packet.validate_magic_number(raw_data[:2])
+                    header = BinaryHandler.parse_header(raw_data[2:])
+                    payload = raw_data[header.get_expected_size() + 2 :]
                     if header.is_compressed:
-                        data = BinaryHandler.decompress(payload)
+                        payload = BinaryHandler.decompress(payload)
                     if header.is_encrypted:
                         raise NotImplementedError("Encrypted data is not supported.")
-                    WebSocketServerManager.data_queue.put(data.decode("utf-8"))
+                    self.data_queue.put(payload.decode("utf-8"))
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     raise RuntimeError(
                         f"WebSocket connection closed with exception {ws.exception()}"
@@ -52,67 +55,58 @@ class WebSocketServerManager:
             raise RuntimeError(f"Unhandled exception in websocket_handler: {e}")
         return ws
 
-    @staticmethod
-    async def run_server():
+    async def run_server(self):
         if not DEPENDENCIES_AVAILABLE:
             return
 
         try:
-            WebSocketServerManager._app = web.Application()
-            route = bpy.context.scene.route  # blender input
-            WebSocketServerManager._app.router.add_route(
-                "GET", route, WebSocketServerManager.websocket_handler
-            )
+            self._app = web.Application()
+            connection = bpy.context.scene.portal_connections[self.index]
+            route = connection.route  # route specific to the connection
+            self._app.router.add_route("GET", route, self.websocket_handler)
 
-            WebSocketServerManager._runner = web.AppRunner(WebSocketServerManager._app)
-            await WebSocketServerManager._runner.setup()
+            self._runner = web.AppRunner(self._app)
+            await self._runner.setup()
 
-            host = "0.0.0.0" if bpy.context.scene.is_external else "localhost"
-            port = bpy.context.scene.port  # blender input
-            WebSocketServerManager._site = web.TCPSite(WebSocketServerManager._runner, host, port)
-            await WebSocketServerManager._site.start()
+            host = "0.0.0.0" if connection.is_external else "localhost"
+            port = connection.port  # port specific to the connection
+            self._site = web.TCPSite(self._runner, host, port)
+            await self._site.start()
 
-            while not WebSocketServerManager.shutdown_event.is_set():
+            while not self.shutdown_event.is_set():
                 await asyncio.sleep(1)
 
-            await WebSocketServerManager._runner.cleanup()
+            await self._runner.cleanup()
         except Exception as e:
             raise RuntimeError(f"Error creating or handling WebSocket server: {e}")
 
-    @staticmethod
-    def start_server():
+    def start_server(self):
         if not DEPENDENCIES_AVAILABLE:
             return
 
-        WebSocketServerManager.shutdown_event.clear()
-        WebSocketServerManager._server_thread = threading.Thread(
-            target=asyncio.run, args=(WebSocketServerManager.run_server(),), daemon=True
+        self.shutdown_event.clear()
+        self._server_thread = threading.Thread(
+            target=asyncio.run, args=(self.run_server(),), daemon=True
         )
-        WebSocketServerManager._server_thread.start()
-        print("WebSocket server started...")
+        self._server_thread.start()
+        print(f"WebSocket server started for connection index: {self.index}")
 
-    @staticmethod
-    def stop_server():
+    def stop_server(self):
         if not DEPENDENCIES_AVAILABLE:
             return
 
-        WebSocketServerManager.shutdown_event.set()
-        if WebSocketServerManager._server_thread:
-            WebSocketServerManager._server_thread.join()
-        print("WebSocket server stopped...")
+        self.shutdown_event.set()
+        if self._server_thread:
+            self._server_thread.join()
+        print(f"WebSocket server stopped for connection index: {self.index}")
 
-    @staticmethod
-    def is_running():
+    def is_running(self):
         if not DEPENDENCIES_AVAILABLE:
             return False
 
-        return (
-            WebSocketServerManager._server_thread is not None
-            and WebSocketServerManager._server_thread.is_alive()
-        )
+        return self._server_thread is not None and self._server_thread.is_alive()
 
-    @staticmethod
-    def is_shutdown():
+    def is_shutdown(self):
         if not DEPENDENCIES_AVAILABLE:
             return True
-        return WebSocketServerManager.shutdown_event.is_set()
+        return self.shutdown_event.is_set()
