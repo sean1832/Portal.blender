@@ -6,3 +6,4 @@ __pycache__/
 test_project[s]
 dist/
 build/
+todo.md
