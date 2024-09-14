@@ -143,8 +143,8 @@ class DataHandler:
             cam.data.sensor_width = sensor_width
             cam.data.sensor_height = sensor_height
 
-        except KeyError as e:
-            raise ValueError(f"Unsupported camera data: {metadata["Camera"]}. Missing key: {e}")
+        except KeyError:
+            return  # skip if camera data is incomplete
 
 
 class MeshHandler:
