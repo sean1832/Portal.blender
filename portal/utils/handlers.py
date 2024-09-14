@@ -8,8 +8,8 @@ from typing import Tuple
 import bpy  # type: ignore
 import mathutils
 
-from ..data_struct.packet import PacketHeader
 from ..data_struct.color import ColorFactory
+from ..data_struct.packet import PacketHeader
 
 
 class BinaryHandler:
@@ -42,8 +42,6 @@ class StringHandler:
                 print(f"Received message: {payload}")
             elif data_type == "Mesh":
                 message_dics, global_metadata = StringHandler.unpack_packet(json.loads(payload))
-                StringHandler.try_handle_camera(global_metadata)  # set camera properties if available
-
                 for i, item in enumerate(message_dics):
                     data, metadata = StringHandler.unpack_packet(item)
                     vertices, faces, colors = MeshHandler.deserialize_mesh(data)
@@ -57,6 +55,11 @@ class StringHandler:
                         material,
                         collection_name=f"connection-{index}",
                     )
+            elif data_type == "Camera":
+                camera_data = json.loads(payload)
+                if not camera_data:
+                    raise ValueError("Camera data is empty.")
+                StringHandler.sync_camera(camera_data)
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported data: {payload}")
 
@@ -79,14 +82,7 @@ class StringHandler:
             return None
 
     @staticmethod
-    def try_handle_camera(metadata):
-        if not metadata:
-            return
-        try:
-            camera_data = metadata["Camera"]
-        except KeyError:
-            return  # skip if no camera data available
-
+    def sync_camera(camera_data):
         try:
             # Extract position
             position = camera_data["Position"]

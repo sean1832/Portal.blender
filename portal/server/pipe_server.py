@@ -40,9 +40,6 @@ class PipeServerManager:
                         1
                     ]
                     header = BinaryHandler.parse_header(header_bytes)
-                    print(
-                        f"checksum: {header.checksum}, size: {header.size}, is_compressed: {header.is_compressed}, is_encrypted: {header.is_encrypted}"
-                    )
                     data = win32file.ReadFile(pipe, header.size, None)[1]
                     if header.is_compressed:
                         data = BinaryHandler.decompress(data)
