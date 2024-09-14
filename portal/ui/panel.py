@@ -21,7 +21,6 @@ class PortalConnection(bpy.types.PropertyGroup):
     )  # type: ignore
     name: bpy.props.StringProperty(name="Connection Name", default="testpipe")  # type: ignore
     port: bpy.props.IntProperty(name="Port", default=8765)  # type: ignore
-    route: bpy.props.StringProperty(name="Route", default="/")  # type: ignore
     is_external: bpy.props.BoolProperty(name="Listen Remote", default=False)  # type: ignore
     buffer_size: bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)  # type: ignore
     data_type: bpy.props.EnumProperty(
@@ -45,6 +44,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
     def execute(self, context):
         new_connection = context.scene.portal_connections.add()
         new_connection.name = f"connection-{len(context.scene.portal_connections)}"
+        new_connection.port = 8765 + len(context.scene.portal_connections) - 1
         return {"FINISHED"}
 
 
@@ -181,8 +181,6 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 elif connection.connection_type == "WEBSOCKETS":
                     col_left.label(text="Port")
                     col_right.prop(connection, "port", text="")
-                    col_left.label(text="Route")
-                    col_right.prop(connection, "route", text="")
                     col_left.label(text="Remote")
                     col_right.prop(connection, "is_external", text="")
                 elif connection.connection_type == "UDP":

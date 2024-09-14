@@ -62,7 +62,7 @@ class WebSocketServerManager:
         try:
             self._app = web.Application()
             connection = bpy.context.scene.portal_connections[self.index]
-            route = connection.route  # route specific to the connection
+            route = "/"  # root route
             self._app.router.add_route("GET", route, self.websocket_handler)
 
             self._runner = web.AppRunner(self._app)
