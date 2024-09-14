@@ -20,18 +20,19 @@ except ImportError:
 
 
 class PipeServerManager:
-    data_queue = queue.Queue()
-    shutdown_event = threading.Event()
-    pipe_handle = None
-    pipe_event = None
-    _server_thread = None
+    def __init__(self, index):
+        self.index = index
+        self.data_queue = queue.Queue()
+        self.shutdown_event = threading.Event()
+        self.pipe_handle = None
+        self.pipe_event = None
+        self._server_thread = None
 
-    @staticmethod
-    def handle_raw_bytes(pipe):
+    def handle_raw_bytes(self, pipe):
         if not PYWIN32_AVAILABLE:
             return
         try:
-            while not PipeServerManager.shutdown_event.is_set():
+            while not self.shutdown_event.is_set():
                 try:
                     signature = win32file.ReadFile(pipe, 2, None)[1]
                     Packet.validate_magic_number(signature)
@@ -39,13 +40,15 @@ class PipeServerManager:
                         1
                     ]
                     header = BinaryHandler.parse_header(header_bytes)
-
+                    print(
+                        f"checksum: {header.checksum}, size: {header.size}, is_compressed: {header.is_compressed}, is_encrypted: {header.is_encrypted}"
+                    )
                     data = win32file.ReadFile(pipe, header.size, None)[1]
                     if header.is_compressed:
                         data = BinaryHandler.decompress(data)
                     if header.is_encrypted:
                         raise NotImplementedError("Encrypted data is not supported.")
-                    PipeServerManager.data_queue.put(data.decode("utf-8"))
+                    self.data_queue.put(data.decode("utf-8"))
                 except pywintypes.error as e:
                     if e.winerror == 109:  # ERROR_BROKEN_PIPE
                         break
@@ -53,14 +56,15 @@ class PipeServerManager:
         except Exception as e:
             raise RuntimeError(f"Error in handle_raw_bytes: {e}")
 
-    @staticmethod
-    def run_server():
+    def run_server(self):
         if not PYWIN32_AVAILABLE:
             return
-        while not PipeServerManager.shutdown_event.is_set():
+        while not self.shutdown_event.is_set():
             try:
-                pipe_name = rf"\\.\pipe\{bpy.context.scene.pipe_name}"
-                PipeServerManager.pipe_handle = win32pipe.CreateNamedPipe(
+                connection = bpy.context.scene.portal_connections[self.index]
+                pipe_name = rf"\\.\pipe\{connection.name}"
+                print(f"Creating pipe: {pipe_name}")
+                self.pipe_handle = win32pipe.CreateNamedPipe(
                     pipe_name,
                     win32pipe.PIPE_ACCESS_INBOUND | win32file.FILE_FLAG_OVERLAPPED,
                     win32pipe.PIPE_TYPE_MESSAGE
@@ -72,34 +76,32 @@ class PipeServerManager:
                     0,
                     None,
                 )
-                PipeServerManager.pipe_event = win32event.CreateEvent(None, True, False, None)
+                self.pipe_event = win32event.CreateEvent(None, True, False, None)
                 overlapped = pywintypes.OVERLAPPED()
-                overlapped.hEvent = PipeServerManager.pipe_event
+                overlapped.hEvent = self.pipe_event
+                win32pipe.ConnectNamedPipe(self.pipe_handle, overlapped)
 
-                win32pipe.ConnectNamedPipe(PipeServerManager.pipe_handle, overlapped)
-
-                while not PipeServerManager.shutdown_event.is_set():
-                    rc = win32event.WaitForSingleObject(PipeServerManager.pipe_event, 100)
+                while not self.shutdown_event.is_set():
+                    rc = win32event.WaitForSingleObject(self.pipe_event, 100)
                     if rc == win32event.WAIT_OBJECT_0:
-                        PipeServerManager.handle_raw_bytes(PipeServerManager.pipe_handle)
-                        win32pipe.DisconnectNamedPipe(PipeServerManager.pipe_handle)
-                        win32pipe.ConnectNamedPipe(PipeServerManager.pipe_handle, overlapped)
+                        self.handle_raw_bytes(self.pipe_handle)
+                        win32pipe.DisconnectNamedPipe(self.pipe_handle)
+                        win32pipe.ConnectNamedPipe(self.pipe_handle, overlapped)
 
             except pywintypes.error as e:
                 if e.winerror != 233:  # Not DisconnectedNamedPipe
                     print(f"Error creating or handling pipe: {e}")
-                if PipeServerManager.shutdown_event.is_set():
+                if self.shutdown_event.is_set():
                     break
                 time.sleep(1)
             finally:
-                PipeServerManager.close_handles()
+                self.close_handles()
 
-    @staticmethod
-    def close_handles():
-        if PipeServerManager.pipe_handle:
+    def close_handles(self):
+        if self.pipe_handle:
             try:
                 # Disconnect the named pipe
-                win32pipe.DisconnectNamedPipe(PipeServerManager.pipe_handle)
+                win32pipe.DisconnectNamedPipe(self.pipe_handle)
             except pywintypes.error as e:
                 if e.winerror == 233:  # no process is on the other end of the pipe
                     pass
@@ -107,53 +109,44 @@ class PipeServerManager:
                     raise (f"Error disconnecting pipe: {e}")
 
             # Close the pipe handle
-            win32file.CloseHandle(PipeServerManager.pipe_handle)
-            PipeServerManager.pipe_handle = None
+            win32file.CloseHandle(self.pipe_handle)
+            self.pipe_handle = None
 
-        if PipeServerManager.pipe_event:
+        if self.pipe_event:
             # Close the event handle
-            win32file.CloseHandle(PipeServerManager.pipe_event)
-            PipeServerManager.pipe_event = None
+            win32file.CloseHandle(self.pipe_event)
+            self.pipe_event = None
 
         # Clear the data queue
-        with PipeServerManager.data_queue.mutex:
-            PipeServerManager.data_queue.queue.clear()
+        with self.data_queue.mutex:
+            self.data_queue.queue.clear()
 
-    @staticmethod
-    def start_server():
-        PipeServerManager.shutdown_event.clear()
-        PipeServerManager._server_thread = threading.Thread(
-            target=PipeServerManager.run_server, daemon=True
-        )
-        PipeServerManager._server_thread.start()
-        print("Pipe server started...")
+    def start_server(self):
+        self.shutdown_event.clear()
+        self._server_thread = threading.Thread(target=self.run_server, daemon=True)
+        self._server_thread.start()
+        print(f"Pipe server started for connection index: {self.index}")
 
-    @staticmethod
-    def stop_server():
-        PipeServerManager.shutdown_event.set()
-        if PipeServerManager.pipe_handle:
+    def stop_server(self):
+        self.shutdown_event.set()
+        if self.pipe_handle:
             try:
-                win32pipe.DisconnectNamedPipe(PipeServerManager.pipe_handle)
+                win32pipe.DisconnectNamedPipe(self.pipe_handle)
             except pywintypes.error:
                 pass
-        if PipeServerManager.pipe_event:
-            win32event.SetEvent(PipeServerManager.pipe_event)
-        if PipeServerManager._server_thread:
-            PipeServerManager._server_thread.join()
-        PipeServerManager.close_handles()
-        print("Pipe server stopped...")
+        if self.pipe_event:
+            win32event.SetEvent(self.pipe_event)
+        if self._server_thread:
+            self._server_thread.join()
+        self.close_handles()
+        print(f"Pipe server stopped for connection index: {self.index}")
 
-    @staticmethod
-    def is_running():
+    def is_running(self):
         if not PYWIN32_AVAILABLE:
             return False
-        return (
-            PipeServerManager._server_thread is not None
-            and PipeServerManager._server_thread.is_alive()
-        )
+        return self._server_thread is not None and self._server_thread.is_alive()
 
-    @staticmethod
-    def is_shutdown():
+    def is_shutdown(self):
         if not PYWIN32_AVAILABLE:
             return True
-        return PipeServerManager.shutdown_event.is_set()
+        return self.shutdown_event.is_set()
