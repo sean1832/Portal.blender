@@ -38,8 +38,14 @@ class StringHandler:
         if payload is None:
             return
         try:
-            if data_type == "Text":
-                print(f"Received message: {payload}")
+            if data_type == "Custom":
+                text_block_name = f"portal-data-{index}"
+                if text_block_name not in bpy.data.texts:
+                    bpy.data.texts.new(text_block_name)
+                bpy.data.texts[text_block_name].clear()
+                bpy.data.texts[text_block_name].write(payload)
+                print(f"Write to text block: {text_block_name}")
+
             elif data_type == "Mesh":
                 message_dics, global_metadata = StringHandler.unpack_packet(json.loads(payload))
                 for i, item in enumerate(message_dics):

@@ -28,7 +28,7 @@ class PortalConnection(bpy.types.PropertyGroup):
         items=[
             ("Mesh", "Mesh", "Receive data as mesh"),
             ("Camera", "Camera", "Receive data as camera"),
-            ("Text", "Text", "Receive data as text"),
+            ("Custom", "Custom", "Handle data with custom handler"),
         ],
         default="Mesh",
     )  # type: ignore
