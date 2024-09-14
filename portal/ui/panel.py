@@ -43,9 +43,16 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
     bl_description = "Add a new connection"
 
     def execute(self, context):
-        new_connection = context.scene.portal_connections.add()
-        new_connection.name = f"channel-{len(context.scene.portal_connections)}"
-        new_connection.port = 6000 + len(context.scene.portal_connections) - 1
+        # Check if there are any existing connections
+        connections = context.scene.portal_connections
+        new_connection = connections.add()
+        new_connection.name = f"channel-{len(connections)}"
+        new_connection.port = 6000 + len(connections) - 1
+
+        if len(connections) > 1:
+            # If there's at least one existing connection, use the same connection type as the last one
+            last_connection = connections[-2]  # Get the last existing connection
+            new_connection.connection_type = last_connection.connection_type
         return {"FINISHED"}
 
 
