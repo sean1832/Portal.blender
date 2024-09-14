@@ -54,6 +54,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
             # If there's at least one existing connection, use the same connection type as the last one
             last_connection = connections[-2]  # Get the last existing connection
             new_connection.connection_type = last_connection.connection_type
+            new_connection.data_type = last_connection.data_type
         return {"FINISHED"}
 
 
