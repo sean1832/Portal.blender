@@ -33,7 +33,7 @@ class PortalConnection(bpy.types.PropertyGroup):
     )  # type: ignore
     event_timer: bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0)  # type: ignore
     running: bpy.props.BoolProperty(name="Running", default=False)  # type: ignore
-    show_details: bpy.props.BoolProperty(name="Show Details", default=False)  # type: ignore
+    show_details: bpy.props.BoolProperty(name="Show Details", default=True)  # type: ignore
 
 
 # Operator to add new connection
