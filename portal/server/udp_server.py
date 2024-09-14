@@ -8,67 +8,62 @@ from ..handlers import BinaryHandler
 
 
 class UDPServerManager:
-    data_queue = queue.Queue()
-    shutdown_event = threading.Event()
-    _server_thread = None
-    _sock = None
+    def __init__(self, index):
+        self.index = index
+        self.data_queue = queue.Queue()
+        self.shutdown_event = threading.Event()
+        self._server_thread = None
+        self._sock = None
 
-    @staticmethod
-    def udp_handler():
-        while not UDPServerManager.shutdown_event.is_set():
+    def udp_handler(self):
+        while not self.shutdown_event.is_set():
             try:
                 # 1500 is the max size of a UDP packet
-                data, addr = UDPServerManager._sock.recvfrom(1500)
+                data, addr = self._sock.recvfrom(1500)
                 header = BinaryHandler.parse_header(data)
                 payload = data[header.get_expected_size() + 2 :]
                 if header.is_compressed:
-                    data = BinaryHandler.decompress(payload)
+                    payload = BinaryHandler.decompress(payload)
                 if header.is_encrypted:
                     raise NotImplementedError("Encrypted data is not supported.")
-                UDPServerManager.data_queue.put(data.decode("utf-8"))
+                self.data_queue.put(payload.decode("utf-8"))
             except socket.timeout:
                 continue
             except Exception as e:
                 raise RuntimeError(f"Error in udp_handler: {e}")
 
-    @staticmethod
-    def run_server():
+    def run_server(self):
         try:
-            host = "0.0.0.0" if bpy.context.scene.is_external else "localhost"
-            port = bpy.context.scene.port  # blender input
-            UDPServerManager._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            UDPServerManager._sock.bind((host, port))
-            UDPServerManager._sock.settimeout(1)
+            connection = bpy.context.scene.portal_connections[self.index]
+            host = "0.0.0.0" if connection.is_external else "localhost"
+            port = connection.port  # use the connection-specific port
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._sock.bind((host, port))
+            self._sock.settimeout(1)  # set a timeout to allow graceful shutdown
 
-            UDPServerManager.udp_handler()
+            self.udp_handler()
         except Exception as e:
             raise RuntimeError(f"Error creating or handling UDP server: {e}")
         finally:
-            UDPServerManager._sock.close()
+            if self._sock:
+                self._sock.close()
 
-    @staticmethod
-    def start_server():
-        UDPServerManager.shutdown_event.clear()
-        UDPServerManager._server_thread = threading.Thread(
-            target=UDPServerManager.run_server, daemon=True
-        )
-        UDPServerManager._server_thread.start()
-        print("UDP server started...")
+    def start_server(self):
+        self.shutdown_event.clear()
+        self._server_thread = threading.Thread(target=self.run_server, daemon=True)
+        self._server_thread.start()
+        print(f"UDP server started for connection index: {self.index}")
 
-    @staticmethod
-    def stop_server():
-        UDPServerManager.shutdown_event.set()
-        if UDPServerManager._server_thread:
-            UDPServerManager._server_thread.join()
-        print("UDP server stopped...")
+    def stop_server(self):
+        self.shutdown_event.set()
+        if self._server_thread:
+            self._server_thread.join()
+        if self._sock:
+            self._sock.close()
+        print(f"UDP server stopped for connection index: {self.index}")
 
-    @staticmethod
-    def is_running():
-        return (
-            UDPServerManager._server_thread is not None
-            and UDPServerManager._server_thread.is_alive()
-        )
+    def is_running(self):
+        return self._server_thread is not None and self._server_thread.is_alive()
 
-    @staticmethod
-    def is_shutdown():
-        return UDPServerManager.shutdown_event.is_set()
+    def is_shutdown(self):
+        return self.shutdown_event.is_set()

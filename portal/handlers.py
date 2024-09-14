@@ -34,7 +34,7 @@ class BinaryHandler:
 
 class DataHandler:
     @staticmethod
-    def handle_str_data(payload, data_type):
+    def handle_str_data(payload, data_type, index):
         if payload is None:
             return
         try:
@@ -42,7 +42,7 @@ class DataHandler:
                 print(f"Received message: {payload}")
             elif data_type == "Mesh":
                 message_dics, global_metadata = DataHandler.unpack_packet(json.loads(payload))
-                DataHandler.handle_camera(global_metadata)  # set camera properties if available
+                DataHandler.try_handle_camera(global_metadata)  # set camera properties if available
 
                 for i, item in enumerate(message_dics):
                     data, metadata = DataHandler.unpack_packet(item)
@@ -50,12 +50,12 @@ class DataHandler:
                     object_name = DataHandler.try_get_name(metadata)
                     material = DataHandler.try_get_material(metadata)
                     MeshHandler.create_or_replace_mesh(
-                        f"{object_name}_{i}",
+                        f"{object_name}_{i}-con-{index}",
                         vertices,
                         faces,
                         colors,
                         material,
-                        collection_name="Imported",
+                        collection_name=f"connection-{index}",
                     )
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported data: {payload}")
@@ -79,7 +79,9 @@ class DataHandler:
             return None
 
     @staticmethod
-    def handle_camera(metadata):
+    def try_handle_camera(metadata):
+        if not metadata:
+            return
         try:
             camera_data = metadata["Camera"]
         except KeyError:
@@ -143,8 +145,8 @@ class DataHandler:
             cam.data.sensor_width = sensor_width
             cam.data.sensor_height = sensor_height
 
-        except KeyError as e:
-            raise ValueError(f"Unsupported camera data: {metadata["Camera"]}. Missing key: {e}")
+        except KeyError:
+            return  # skip if camera data is incomplete
 
 
 class MeshHandler:
