@@ -20,7 +20,7 @@ class PortalConnection(bpy.types.PropertyGroup):
         default="NAMED_PIPE",
     )  # type: ignore
     name: bpy.props.StringProperty(name="Connection Name", default="testpipe")  # type: ignore
-    port: bpy.props.IntProperty(name="Port", default=8765)  # type: ignore
+    port: bpy.props.IntProperty(name="Port", default=6000)  # type: ignore
     is_external: bpy.props.BoolProperty(name="Listen Remote", default=False)  # type: ignore
     buffer_size: bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)  # type: ignore
     data_type: bpy.props.EnumProperty(
@@ -44,7 +44,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
     def execute(self, context):
         new_connection = context.scene.portal_connections.add()
         new_connection.name = f"connection-{len(context.scene.portal_connections)}"
-        new_connection.port = 8765 + len(context.scene.portal_connections) - 1
+        new_connection.port = 6000 + len(context.scene.portal_connections) - 1
         return {"FINISHED"}
 
 
