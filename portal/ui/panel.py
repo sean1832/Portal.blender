@@ -40,6 +40,7 @@ class PortalConnection(bpy.types.PropertyGroup):
 class PORTAL_OT_AddConnection(bpy.types.Operator):
     bl_idname = "portal.add_connection"
     bl_label = "Add New Connection"
+    bl_description = "Add a new connection"
 
     def execute(self, context):
         new_connection = context.scene.portal_connections.add()
@@ -52,6 +53,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
 class PORTAL_OT_RemoveConnection(bpy.types.Operator):
     bl_idname = "portal.remove_connection"
     bl_label = "Remove Selected Connection"
+    bl_description = "Remove the selected connection"
     index: bpy.props.IntProperty()  # type: ignore
 
     def execute(self, context):
@@ -63,6 +65,7 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
 class PORTAL_OT_ToggleServer(bpy.types.Operator):
     bl_idname = "portal.toggle_server"
     bl_label = "Start/Stop Server"
+    bl_description = "Start or stop the selected server"
     index: bpy.props.IntProperty()  # type: ignore
 
     def execute(self, context):
@@ -89,6 +92,7 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
 class ModalOperator(bpy.types.Operator):
     bl_idname = "wm.modal_operator"
     bl_label = "Listener Modal Operator"
+    bl_description = "Modal operator to handle server events"
 
     index: bpy.props.IntProperty()  # type: ignore
 
