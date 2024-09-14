@@ -23,18 +23,18 @@ def monitor_text_block():
     global last_text_hash
 
     # Get values from the properties defined in the UI
-    text_block_name = bpy.context.scene.text_block_name
+    channel_name = bpy.context.scene.channel_name
     check_interval = bpy.context.scene.check_interval
 
-    if text_block_name in bpy.data.texts:
-        text_block = bpy.data.texts[text_block_name]
+    if channel_name in bpy.data.texts:
+        text_block = bpy.data.texts[channel_name]
         new_text = text_block.as_string()
         new_hash = hash(new_text)
 
         # If the text has changed, handle the new data
         if new_hash != last_text_hash:
             last_text_hash = new_hash
-            custom_data_handler(new_text) # Call the custom data handler function
+            custom_data_handler(new_text)  # Call the custom data handler function
 
     return check_interval  # Return the interval to keep monitoring
 
@@ -60,9 +60,10 @@ class TEXTBLOCK_PT_monitor(bpy.types.Panel):
         split = layout.split(factor=0.4)
         col_left = split.column()
         col_right = split.column()
-        col_left.label(text="Block Name")
-        col_right.prop(context.scene, "text_block_name", text="")
-        layout.prop(context.scene, "check_interval", text="Check Interval (sec)")
+        col_left.label(text="Channel Name")
+        col_right.prop(context.scene, "channel_name", text="")
+        col_left.label(text="Interval (sec)")
+        col_right.prop(context.scene, "check_interval", text="")
 
         # Separator for better UI clarity
         layout.separator()
@@ -113,8 +114,8 @@ def register():
         bpy.utils.register_class(cls)
 
     # Add properties to the scene for user input
-    bpy.types.Scene.text_block_name = bpy.props.StringProperty(
-        name="Text Block Name", default="portal-data-0"
+    bpy.types.Scene.channel_name = bpy.props.StringProperty(
+        name="Channel Name", default="channel-1"
     )
     bpy.types.Scene.check_interval = bpy.props.FloatProperty(
         name="Check Interval", default=0.01, min=0.01, max=2.0
@@ -127,7 +128,7 @@ def unregister():
         bpy.utils.unregister_class(cls)
 
     # Remove properties from the scene
-    del bpy.types.Scene.text_block_name
+    del bpy.types.Scene.channel_name
     del bpy.types.Scene.check_interval
     del bpy.types.Scene.is_monitoring
 

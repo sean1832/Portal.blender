@@ -34,12 +34,12 @@ class BinaryHandler:
 
 class StringHandler:
     @staticmethod
-    def handle_str_data(payload, data_type, index):
+    def handle_str_data(payload, data_type, index, channel_name):
         if payload is None:
             return
         try:
             if data_type == "Custom":
-                text_block_name = f"portal-data-{index}"
+                text_block_name = f"{channel_name}"
                 if text_block_name not in bpy.data.texts:
                     bpy.data.texts.new(text_block_name)
                 bpy.data.texts[text_block_name].clear()
