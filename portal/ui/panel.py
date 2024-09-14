@@ -2,8 +2,8 @@ import queue
 
 import bpy
 
-from ..handlers import StringHandler
-from ..managers import get_server_manager, remove_server_manager
+from ..utils.handlers import StringHandler
+from ..utils.managers import get_server_manager, remove_server_manager
 
 
 # Custom property group to hold connection properties

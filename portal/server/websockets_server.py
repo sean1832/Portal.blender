@@ -13,7 +13,7 @@ except ImportError:
     DEPENDENCIES_AVAILABLE = False
 
 from ..data_struct.packet import Packet
-from ..handlers import BinaryHandler
+from ..utils.handlers import BinaryHandler
 
 
 class WebSocketServerManager:

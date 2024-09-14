@@ -8,8 +8,8 @@ from typing import Tuple
 import bpy  # type: ignore
 import mathutils
 
-from .data_struct.packet import PacketHeader
-from .utils.color import ColorFactory
+from ..data_struct.packet import PacketHeader
+from ..data_struct.color import ColorFactory
 
 
 class BinaryHandler:

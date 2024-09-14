@@ -4,7 +4,7 @@ import threading
 
 import bpy  # type: ignore
 
-from ..handlers import BinaryHandler
+from ..utils.handlers import BinaryHandler
 
 
 class UDPServerManager:

@@ -5,7 +5,7 @@ import time
 import bpy  # type: ignore
 
 from ..data_struct.packet import Packet, PacketHeader
-from ..handlers import BinaryHandler
+from ..utils.handlers import BinaryHandler
 
 # Attempt to import the pywin32 modules safely
 try:
