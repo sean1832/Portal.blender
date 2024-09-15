@@ -42,9 +42,8 @@ class StringHandler:
         for i, item in enumerate(message_dicts):
             data, metadata = StringHandler.unpack_packet(item)
             mesh = Mesh.from_dict(dict=data)
-            mesh.create_or_replace(
-                object_name=f"obj_{i}_{channel_name}", collection_name=channel_name
-            )
+            layer_path = StringHandler._handle_layer_path(metadata, channel_name)
+            mesh.create_or_replace(object_name=f"obj_{i}_{channel_name}", layer_path=layer_path)
             material_data = metadata.get("Material")
             if material_data:
                 material = Material.from_dict(material_data)
@@ -68,6 +67,16 @@ class StringHandler:
             return packet["Items"], packet["Meta"]
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported packet data: {packet}")
+
+    @staticmethod
+    def _handle_layer_path(data: dict, channel_name: str) -> None:
+        """Handle layer path data."""
+        layer_path = data.get("Layer").get("FullPath")
+        if not layer_path:
+            layer_path = channel_name
+        else:
+            layer_path = f"{channel_name}::{layer_path}"
+        return layer_path
 
     @staticmethod
     def _get_name(metadata: str) -> str:

@@ -1,7 +1,7 @@
 import bpy
 
-from ..data_struct.color import ColorFactory
-from ..data_struct.material import Material
+from .color import ColorFactory
+from .material import Material
 
 
 class Mesh:
@@ -21,7 +21,7 @@ class Mesh:
         self.uvs = uvs or []
         self.vertex_colors = vertex_colors or []
 
-    def create_or_replace(self, object_name, collection_name=None):
+    def create_or_replace(self, object_name, layer_path=None):
         """Create or replace the mesh in Blender."""
         self._validate_data()
         self.object_name = object_name
@@ -31,7 +31,7 @@ class Mesh:
         if existing_obj and existing_obj.type == "MESH":
             self._replace_mesh(existing_obj)
         else:
-            self._create_new_mesh(object_name, collection_name)
+            self._create_new_mesh(object_name, layer_path)
 
         if self.vertex_colors:
             self._apply_vertex_colors()
@@ -45,7 +45,7 @@ class Mesh:
 
         if not obj:
             raise ValueError(f"Object {self.object_name} not found.")
-        
+
         if isinstance(material, str):
             mat = bpy.data.materials.get(material)
             if not mat:
@@ -55,7 +55,7 @@ class Mesh:
             mat = material.material
         else:
             raise ValueError("Material must be a string or Material object.")
-        
+
         # Apply the material to the object
         if len(obj.data.materials) == 0:
             obj.data.materials.append(mat)
@@ -92,14 +92,14 @@ class Mesh:
                 if vertex_index in uv_dict:
                     uv_layer.data[idx].uv = uv_dict[vertex_index]
 
-    def _create_new_mesh(self, object_name, collection_name=None):
+    def _create_new_mesh(self, object_name, layer_path=None):
         """Create a new mesh in Blender."""
         self.mesh_data = bpy.data.meshes.new(f"{object_name}_mesh")
         self.mesh_data.from_pydata(self.vertices, [], self.faces)
         self.mesh_data.update()
 
         new_object = bpy.data.objects.new(object_name, self.mesh_data)
-        self._link_object_to_collection(new_object, collection_name)
+        self._link_object_to_collection(new_object, layer_path)
 
     def _replace_mesh(self, existing_obj):
         """Replace the existing mesh data in the Blender object."""
@@ -116,14 +116,34 @@ class Mesh:
         if not self.vertices or not self.faces:
             raise ValueError("Mesh data must include vertices and faces.")
 
-    def _link_object_to_collection(self, obj, collection_name=None):
-        """Link the object to the appropriate Blender collection."""
-        if collection_name:
-            collection = bpy.data.collections.get(collection_name)
-            if not collection:
-                collection = bpy.data.collections.new(collection_name)
-                bpy.context.scene.collection.children.link(collection)
-            collection.objects.link(obj)
+    def _link_object_to_collection(self, obj, layer_path=None):
+        """Link the object to the appropriate Blender collection, handling nested layers."""
+        if layer_path:
+            layer_names = layer_path.split("::")
+            parent_collection = None
+
+            for layer in layer_names:
+                # Ensure unique layer names by appending suffix if duplicate exists
+                collection_name = layer
+                suffix = 1
+                while bpy.data.collections.get(collection_name):
+                    collection_name = f"{layer}_{suffix}"
+                    suffix += 1
+
+                # Create or get the collection
+                collection = bpy.data.collections.get(collection_name)
+                if not collection:
+                    collection = bpy.data.collections.new(collection_name)
+                    if parent_collection:
+                        parent_collection.children.link(collection)
+                    else:
+                        bpy.context.scene.collection.children.link(collection)
+
+                # Set parent for the next nested layer
+                parent_collection = collection
+
+            # Link the object to the final collection in the nested structure
+            parent_collection.objects.link(obj)
         else:
             bpy.context.collection.objects.link(obj)
 
