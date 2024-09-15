@@ -11,7 +11,7 @@ from .ui.panel import register_ui, unregister_ui
 bl_info = {
     "name": "Portal",
     "author": "Zeke Zhang",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (4, 2, 0),
     "category": "System",
     "location": "View3D > Sidebar > Portal",
