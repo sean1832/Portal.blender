@@ -4,6 +4,7 @@ from typing import Tuple
 import bpy
 
 from ..data_struct.camera import Camera
+from ..data_struct.material import Material
 from ..data_struct.mesh import Mesh
 
 
@@ -44,6 +45,11 @@ class StringHandler:
             mesh.create_or_replace(
                 object_name=f"obj_{i}_{channel_name}", collection_name=channel_name
             )
+            material_data = metadata.get("Material")
+            if material_data:
+                material = Material.from_dict(material_data)
+                material.create_or_replace(material_data.get("Name"))
+                mesh.apply_material(material.name)
 
     @staticmethod
     def _handle_camera_data(payload):

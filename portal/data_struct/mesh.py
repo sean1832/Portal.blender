@@ -1,6 +1,7 @@
 import bpy
 
 from ..data_struct.color import ColorFactory
+from ..data_struct.material import Material
 
 
 class Mesh:
@@ -10,20 +11,20 @@ class Mesh:
         self.faces = []
         self.vertex_colors = []
         self.uvs = []
-        self.material = None
         self.mesh_data = None
+        self.object_name = None
 
-    def set_data(self, vertices, faces, uvs=None, vertex_colors=None, material=None):
+    def set_data(self, vertices, faces, uvs=None, vertex_colors=None):
         """Set the mesh data."""
         self.vertices = vertices
         self.faces = faces
         self.uvs = uvs or []
         self.vertex_colors = vertex_colors or []
-        self.material = material
 
     def create_or_replace(self, object_name, collection_name=None):
         """Create or replace the mesh in Blender."""
         self._validate_data()
+        self.object_name = object_name
 
         existing_obj = bpy.data.objects.get(object_name)
 
@@ -33,15 +34,35 @@ class Mesh:
             self._create_new_mesh(object_name, collection_name)
 
         if self.vertex_colors:
-            self.apply_vertex_colors()
+            self._apply_vertex_colors()
 
         if self.uvs:
-            self.apply_uv_map()
+            self._apply_uv_map()
 
-        if self.material:
-            self.apply_material(object_name)
+    def apply_material(self, material):
+        """Apply material to the mesh object."""
+        obj = bpy.data.objects.get(self.object_name)
 
-    def apply_vertex_colors(self):
+        if not obj:
+            raise ValueError(f"Object {self.object_name} not found.")
+        
+        if isinstance(material, str):
+            mat = bpy.data.materials.get(material)
+            if not mat:
+                raise ValueError(f"Material {material} not found.")
+        elif isinstance(material, Material):
+            material.create_or_replace(material.name)
+            mat = material.material
+        else:
+            raise ValueError("Material must be a string or Material object.")
+        
+        # Apply the material to the object
+        if len(obj.data.materials) == 0:
+            obj.data.materials.append(mat)
+        else:
+            obj.data.materials[0] = mat
+
+    def _apply_vertex_colors(self):
         """Apply vertex colors to the mesh."""
         if not self.mesh_data.vertex_colors:
             self.mesh_data.vertex_colors.new()
@@ -56,7 +77,7 @@ class Mesh:
                 if vertex_index in color_dict:
                     color_layer.data[idx].color = color_dict[vertex_index]
 
-    def apply_uv_map(self):
+    def _apply_uv_map(self):
         """Apply UV map to the mesh."""
         if not self.mesh_data.uv_layers:
             self.mesh_data.uv_layers.new()
@@ -70,18 +91,6 @@ class Mesh:
                 vertex_index = loop.vertex_index
                 if vertex_index in uv_dict:
                     uv_layer.data[idx].uv = uv_dict[vertex_index]
-
-    def apply_material(self, object_name):
-        """Apply material to the mesh object."""
-        mat = bpy.data.materials.get(self.material)
-        if mat:
-            obj = bpy.data.objects.get(object_name)
-            if len(obj.data.materials) == 0:
-                obj.data.materials.append(mat)
-            else:
-                obj.data.materials[0] = mat
-        else:
-            print(f"Material {self.material} not found.")
 
     def _create_new_mesh(self, object_name, collection_name=None):
         """Create a new mesh in Blender."""
@@ -132,7 +141,6 @@ class Mesh:
                 ColorFactory.from_hex(hex_str).to_normalized_tuple() for hex_str in color_hexs
             ]
 
-        material = dict.get("Material")
         mesh = Mesh()
-        mesh.set_data(vertices, faces, uvs, vertex_colors, material)
+        mesh.set_data(vertices, faces, uvs, vertex_colors)
         return mesh
