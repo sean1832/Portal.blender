@@ -6,7 +6,7 @@ import time
 import bpy  # type: ignore
 
 from ..data_struct.packet import Packet, PacketHeader
-from ..handlers import BinaryHandler
+from ..handlers.binary_handler import BinaryHandler
 
 
 class MMFServerManager:

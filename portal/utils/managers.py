@@ -1,7 +1,7 @@
-from .server.mmap_server import MMFServerManager
-from .server.pipe_server import PipeServerManager
-from .server.udp_server import UDPServerManager
-from .server.websockets_server import WebSocketServerManager
+from ..server.mmap_server import MMFServerManager
+from ..server.pipe_server import PipeServerManager
+from ..server.udp_server import UDPServerManager
+from ..server.websockets_server import WebSocketServerManager
 
 # Dictionary to store instances of server managers for each connection
 SERVER_MANAGERS = {}

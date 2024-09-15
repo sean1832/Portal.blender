@@ -2,8 +2,8 @@ import queue
 
 import bpy
 
-from ..handlers import StringHandler
-from ..managers import get_server_manager, remove_server_manager
+from ..handlers.string_handler import StringHandler
+from ..utils.managers import get_server_manager, remove_server_manager
 
 
 # Custom property group to hold connection properties
@@ -27,7 +27,8 @@ class PortalConnection(bpy.types.PropertyGroup):
         name="Data Type",
         items=[
             ("Mesh", "Mesh", "Receive data as mesh"),
-            ("Text", "Text", "Receive data as text"),
+            ("Camera", "Camera", "Receive data as camera"),
+            ("Custom", "Custom", "Handle data with custom handler"),
         ],
         default="Mesh",
     )  # type: ignore
@@ -53,6 +54,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
             # If there's at least one existing connection, use the same connection type as the last one
             last_connection = connections[-2]  # Get the last existing connection
             new_connection.connection_type = last_connection.connection_type
+            new_connection.data_type = last_connection.data_type
         return {"FINISHED"}
 
 
@@ -118,7 +120,9 @@ class ModalOperator(bpy.types.Operator):
             while not server_manager.data_queue.empty():
                 try:
                     data = server_manager.data_queue.get_nowait()
-                    StringHandler.handle_str_data(data, connection.data_type, self.index)
+                    StringHandler.handle_string(
+                        data, connection.data_type, self.index, connection.name
+                    )
                 except queue.Empty:
                     break
         return {"PASS_THROUGH"}
