@@ -9,13 +9,15 @@ class Mesh:
         self.vertices = []
         self.faces = []
         self.vertex_colors = []
+        self.uvs = []
         self.material = None
         self.mesh_data = None
 
-    def set_data(self, vertices, faces, vertex_colors=None, material=None):
+    def set_data(self, vertices, faces, uvs=None, vertex_colors=None, material=None):
         """Set the mesh data."""
         self.vertices = vertices
         self.faces = faces
+        self.uvs = uvs or []
         self.vertex_colors = vertex_colors or []
         self.material = material
 
@@ -32,6 +34,9 @@ class Mesh:
 
         if self.vertex_colors:
             self.apply_vertex_colors()
+
+        if self.uvs:
+            self.apply_uv_map()
 
         if self.material:
             self.apply_material(object_name)
@@ -50,6 +55,21 @@ class Mesh:
                 vertex_index = loop.vertex_index
                 if vertex_index in color_dict:
                     color_layer.data[idx].color = color_dict[vertex_index]
+
+    def apply_uv_map(self):
+        """Apply UV map to the mesh."""
+        if not self.mesh_data.uv_layers:
+            self.mesh_data.uv_layers.new()
+
+        uv_layer = self.mesh_data.uv_layers.active
+        uv_dict = {i: uv for i, uv in enumerate(self.uvs)}
+
+        for poly in self.mesh_data.polygons:
+            for idx in poly.loop_indices:
+                loop = self.mesh_data.loops[idx]
+                vertex_index = loop.vertex_index
+                if vertex_index in uv_dict:
+                    uv_layer.data[idx].uv = uv_dict[vertex_index]
 
     def apply_material(self, object_name):
         """Apply material to the mesh object."""
@@ -103,6 +123,7 @@ class Mesh:
         """Create a Mesh object from json dictionary."""
         vertices = [(v["X"], v["Y"], v["Z"]) for v in dict["Vertices"]]
         faces = [tuple(face_list) for face_list in dict["Faces"]]
+        uvs = [(uv["X"], uv["Y"]) for uv in dict.get("UVs", [])]
         color_hexs = dict.get("VertexColors")
 
         vertex_colors = None
@@ -113,5 +134,5 @@ class Mesh:
 
         material = dict.get("Material")
         mesh = Mesh()
-        mesh.set_data(vertices, faces, vertex_colors, material)
+        mesh.set_data(vertices, faces, uvs, vertex_colors, material)
         return mesh
