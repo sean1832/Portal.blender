@@ -46,7 +46,11 @@ class StringHandler:
             mesh.create_or_replace(object_name=f"obj_{i}_{channel_name}", layer_path=layer_path)
 
             if metadata.get("Material"):
-                StringHandler._apply_mesh_material(mesh, metadata["Material"])
+                # if material is string
+                if isinstance(metadata["Material"], str):
+                    mesh.apply_material(metadata["Material"])
+                else:
+                    StringHandler._apply_mesh_material(mesh, metadata["Material"])
             elif layer_mat:
                 StringHandler._apply_mesh_material(mesh, layer_mat)
 
