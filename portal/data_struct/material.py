@@ -26,6 +26,16 @@ class Material:
         self.name = material_name
         self.material = bpy.data.materials.get(self.name)
 
+        if self.material:
+            # Check if the existing material parameters match
+            if self._is_same_material():
+                # Material is the same, skip
+                return
+            else:
+                print(
+                    f"Updating material {self.name}."
+                )
+
         if not self.material:
             self.material = bpy.data.materials.new(self.name)
 
@@ -34,6 +44,40 @@ class Material:
 
         if len(self.textures) > 0:
             self._apply_textures()
+
+    def _is_same_material(self):
+        """Check if the existing material parameters match the new ones."""
+        # Check diffuse color
+        current_diffuse = self.material.diffuse_color[:3]  # Compare RGB values only
+        new_diffuse = ColorFactory.from_hex(self.diffuse_color).to_normalized_tuple()[:3]
+
+        if not self._compare_colors(current_diffuse, new_diffuse):
+            return False
+
+        # If the material doesn't use nodes, skip texture comparison
+        if not self.material.use_nodes or not self.material.node_tree:
+            # If textures are provided for a non-node material, assume it doesn't match
+            if self.textures:
+                return False
+            # If no textures and diffuse color matches, return True
+            return True
+
+        # Material uses nodes, proceed to check textures
+        existing_textures = [
+            node for node in self.material.node_tree.nodes if node.type == "TEX_IMAGE"
+        ]
+        if len(existing_textures) != len(self.textures):
+            return False
+
+        for tex_node, new_texture in zip(existing_textures, self.textures):
+            if tex_node.image.filepath != new_texture["Path"]:
+                return False
+
+        return True
+
+    def _compare_colors(self, color1, color2, tolerance=1e-4):
+        """Compare two colors with a tolerance for floating-point precision."""
+        return all(abs(a - b) <= tolerance for a, b in zip(color1, color2))
 
     def _set_diffuse_color(self):
         """Set the base color of the material."""
