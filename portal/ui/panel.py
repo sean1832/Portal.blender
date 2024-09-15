@@ -2,7 +2,7 @@ import queue
 
 import bpy
 
-from ..utils.handlers import StringHandler
+from ..handlers.string_handler import StringHandler
 from ..utils.managers import get_server_manager, remove_server_manager
 
 
@@ -120,7 +120,9 @@ class ModalOperator(bpy.types.Operator):
             while not server_manager.data_queue.empty():
                 try:
                     data = server_manager.data_queue.get_nowait()
-                    StringHandler.handle_str_data(data, connection.data_type, self.index, connection.name)
+                    StringHandler.handle_string(
+                        data, connection.data_type, self.index, connection.name
+                    )
                 except queue.Empty:
                     break
         return {"PASS_THROUGH"}
