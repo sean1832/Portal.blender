@@ -42,13 +42,13 @@ class StringHandler:
         for i, item in enumerate(message_dicts):
             data, metadata = StringHandler.unpack_packet(item)
             mesh = Mesh.from_dict(dict=data)
-            layer_path = StringHandler._handle_layer_path(metadata, channel_name)
+            layer_path, layer_mat = StringHandler._handle_layer(metadata, channel_name)
             mesh.create_or_replace(object_name=f"obj_{i}_{channel_name}", layer_path=layer_path)
-            material_data = metadata.get("Material")
-            if material_data:
-                material = Material.from_dict(material_data)
-                material.create_or_replace(material_data.get("Name"))
-                mesh.apply_material(material.name)
+
+            if metadata["Material"]:
+                StringHandler._apply_mesh_material(mesh, metadata["Material"])
+            elif layer_mat:
+                StringHandler._apply_mesh_material(mesh, layer_mat)
 
     @staticmethod
     def _handle_camera_data(payload):
@@ -69,14 +69,22 @@ class StringHandler:
             raise ValueError(f"Unsupported packet data: {packet}")
 
     @staticmethod
-    def _handle_layer_path(data: dict, channel_name: str) -> None:
+    def _apply_mesh_material(mesh, material_data):
+        material = Material.from_dict(material_data)
+        material.create_or_replace(material_data.get("Name"))
+        mesh.apply_material(material.name)
+
+    @staticmethod
+    def _handle_layer(data: dict, channel_name: str) -> None:
         """Handle layer path data."""
         layer_path = data.get("Layer").get("FullPath")
         if not layer_path:
             layer_path = channel_name
         else:
             layer_path = f"{channel_name}::{layer_path}"
-        return layer_path
+
+        layer_mat = data.get("Layer").get("Material")
+        return layer_path, layer_mat
 
     @staticmethod
     def _get_name(metadata: str) -> str:
