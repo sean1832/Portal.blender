@@ -5,6 +5,8 @@ import bpy
 from ..handlers.string_handler import StringHandler
 from ..utils.managers import get_server_manager, remove_server_manager
 
+MODAL_OPERATORS = {}
+
 
 # Custom property group to hold connection properties
 class PortalConnection(bpy.types.PropertyGroup):
@@ -66,6 +68,23 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
     index: bpy.props.IntProperty()  # type: ignore
 
     def execute(self, context):
+        global MODAL_OPERATORS
+        connection = context.scene.portal_connections[self.index]
+        
+        # Check if the server is running and stop it before removing the connection
+        if connection.running:
+            server_manager = get_server_manager(connection.connection_type, self.index)
+            if server_manager and server_manager.is_running():
+                server_manager.stop_server()
+                connection.running = False
+                remove_server_manager(self.index)
+
+            # Cancel the modal operator if it is running
+            if self.index in MODAL_OPERATORS:
+                modal_operator = MODAL_OPERATORS[self.index]
+                modal_operator.cancel(context)
+
+        # Now safe to remove the connection
         context.scene.portal_connections.remove(self.index)
         return {"FINISHED"}
 
@@ -109,6 +128,12 @@ class ModalOperator(bpy.types.Operator):
         self._timer = None
 
     def modal(self, context, event):
+        # Check if the connection still exists
+        if self.index >= len(context.scene.portal_connections):
+            # Connection has been removed; cancel the modal operator
+            self.cancel(context)
+            return {"CANCELLED"}
+
         connection = context.scene.portal_connections[self.index]
         server_manager = get_server_manager(connection.connection_type, self.index)
 
@@ -128,15 +153,29 @@ class ModalOperator(bpy.types.Operator):
         return {"PASS_THROUGH"}
 
     def execute(self, context):
+        global MODAL_OPERATORS
         connection = context.scene.portal_connections[self.index]
         self._timer = context.window_manager.event_timer_add(
             connection.event_timer, window=context.window
         )
         context.window_manager.modal_handler_add(self)
+
+        # Store this modal operator in the global dictionary
+        MODAL_OPERATORS[self.index] = self
+
         return {"RUNNING_MODAL"}
 
     def cancel(self, context):
-        context.window_manager.event_timer_remove(self._timer)
+        global MODAL_OPERATORS
+        if self._timer:
+            context.window_manager.event_timer_remove(self._timer)
+        self._timer = None
+
+        # Remove the modal operator from the dictionary
+        if self.index in MODAL_OPERATORS:
+            del MODAL_OPERATORS[self.index]
+
+        return {"CANCELLED"}
 
 
 # Main panel to show connections
