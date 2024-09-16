@@ -87,10 +87,13 @@ class TEXTBLOCK_OT_toggle_monitoring(bpy.types.Operator):
 
     def execute(self, context):
         if context.scene.is_monitoring:
-            # Stop monitoring
-            bpy.app.timers.unregister(monitor_text_block)
+            # Check if monitor_text_block is registered before unregistering
+            if bpy.app.timers.is_registered(monitor_text_block):
+                bpy.app.timers.unregister(monitor_text_block)
+                self.report({"INFO"}, "Stopped text block monitoring")
+            else:
+                self.report({"WARNING"}, "Monitor not registered, nothing to stop")
             context.scene.is_monitoring = False
-            self.report({"INFO"}, "Stopped text block monitoring")
         else:
             # Start monitoring
             bpy.app.timers.register(monitor_text_block)
