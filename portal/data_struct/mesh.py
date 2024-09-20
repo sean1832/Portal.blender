@@ -122,13 +122,16 @@ class Mesh:
             layer_names = layer_path.split("::")
             parent_collection = None
 
-            for layer in layer_names:
-                # Ensure unique layer names by appending suffix if duplicate exists
-                collection_name = layer
-                suffix = 1
-                while bpy.data.collections.get(collection_name):
-                    collection_name = f"{layer}_{suffix}"
-                    suffix += 1
+            for i, layer in enumerate(layer_names):
+                # If it's the last layer in the path, check for duplicates and rename if necessary
+                if i == len(layer_names) - 1:
+                    collection_name = layer
+                    suffix = 1
+                    while bpy.data.collections.get(collection_name):
+                        collection_name = f"{layer}_{suffix}"
+                        suffix += 1
+                else:
+                    collection_name = layer
 
                 # Create or get the collection
                 collection = bpy.data.collections.get(collection_name)
@@ -146,6 +149,7 @@ class Mesh:
             parent_collection.objects.link(obj)
         else:
             bpy.context.collection.objects.link(obj)
+
 
     @staticmethod
     def from_dict(dict):
