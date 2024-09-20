@@ -42,7 +42,10 @@ class StringHandler:
         for i, item in enumerate(message_dicts):
             data, metadata = StringHandler.unpack_packet(item)
             mesh = Mesh.from_dict(dict=data)
-            layer_path, layer_mat = StringHandler._handle_layer(metadata, channel_name)
+            try:
+                layer_path, layer_mat = StringHandler._handle_layer(metadata, channel_name)
+            except AttributeError:
+                layer_path, layer_mat = channel_name, None
             mesh.create_or_replace(object_name=f"obj_{i}_{channel_name}", layer_path=layer_path)
 
             if metadata.get("Material"):
