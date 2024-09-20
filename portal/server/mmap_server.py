@@ -10,8 +10,12 @@ from ..handlers.binary_handler import BinaryHandler
 
 
 class MMFServerManager:
-    def __init__(self, index):
-        self.index = index
+    def __init__(self, uuid):
+        self.uuid = uuid
+        self.connection = next(
+            (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
+            None,
+        )
         self.data_queue = queue.Queue()
         self.shutdown_event = threading.Event()
         self._server_thread = None
@@ -44,7 +48,7 @@ class MMFServerManager:
                         except UnicodeDecodeError:
                             raise ValueError("Received data cannot be decoded as UTF-8.")
                         self.data_queue.put(decoded_data)
-                    time.sleep(bpy.context.scene.portal_connections[self.index].event_timer)
+                    time.sleep(self.connection.event_timer)
                 else:
                     raise ValueError(
                         "Not enough data to read hash & length prefix. "
@@ -59,9 +63,8 @@ class MMFServerManager:
     def run_server(self):
         while not self.shutdown_event.is_set():
             try:
-                connection = bpy.context.scene.portal_connections[self.index]
-                mmf_name = connection.name
-                buffer_size = connection.buffer_size * 1024  # Convert KB to bytes
+                mmf_name = self.connection.name
+                buffer_size = self.connection.buffer_size * 1024  # Convert KB to bytes
                 self.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
                 self.handle_raw_bytes()
             except Exception as e:
@@ -81,14 +84,14 @@ class MMFServerManager:
         self.shutdown_event.clear()
         self._server_thread = threading.Thread(target=self.run_server, daemon=True)
         self._server_thread.start()
-        print(f"MMF server started for connection index: {self.index}")
+        print(f"MMF server started for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def stop_server(self):
         self.shutdown_event.set()
         if self._server_thread:
             self._server_thread.join()
         self.close_mmf()
-        print(f"MMF server stopped for connection index: {self.index}")
+        print(f"MMF server stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def is_running(self):
         return self._server_thread is not None and self._server_thread.is_alive()

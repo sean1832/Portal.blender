@@ -10,7 +10,7 @@ from ..data_struct.mesh import Mesh
 
 class StringHandler:
     @staticmethod
-    def handle_string(payload, data_type, index, channel_name):
+    def handle_string(payload, data_type, uuid, channel_name):
         """Handle generic string data for different types."""
         if payload is None:
             return

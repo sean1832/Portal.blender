@@ -17,8 +17,12 @@ from ..handlers.binary_handler import BinaryHandler
 
 
 class WebSocketServerManager:
-    def __init__(self, index):
-        self.index = index
+    def __init__(self, uuid):
+        self.uuid = uuid
+        self.connection = next(
+            (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
+            None,
+        )
         self.data_queue = queue.Queue()
         self.shutdown_event = threading.Event()
         self._server_thread = None
@@ -61,15 +65,14 @@ class WebSocketServerManager:
 
         try:
             self._app = web.Application()
-            connection = bpy.context.scene.portal_connections[self.index]
             route = "/"  # root route
             self._app.router.add_route("GET", route, self.websocket_handler)
 
             self._runner = web.AppRunner(self._app)
             await self._runner.setup()
 
-            host = "0.0.0.0" if connection.is_external else "localhost"
-            port = connection.port  # port specific to the connection
+            host = "0.0.0.0" if self.connection.is_external else "localhost"
+            port = self.connection.port  # port specific to the connection
             self._site = web.TCPSite(self._runner, host, port)
             await self._site.start()
 
@@ -89,7 +92,9 @@ class WebSocketServerManager:
             target=asyncio.run, args=(self.run_server(),), daemon=True
         )
         self._server_thread.start()
-        print(f"WebSocket server started for connection index: {self.index}")
+        print(
+            f"WebSocket server started for connection uuid: {self.uuid}, name: {self.connection.name}"
+        )
 
     def stop_server(self):
         if not DEPENDENCIES_AVAILABLE:
@@ -97,8 +102,10 @@ class WebSocketServerManager:
 
         self.shutdown_event.set()
         if self._server_thread:
-            self._server_thread.join()
-        print(f"WebSocket server stopped for connection index: {self.index}")
+            self._server_thread.join(1)
+        print(
+            f"WebSocket server stopped for connection uuid: {self.uuid}, name: {self.connection.name}"
+        )
 
     def is_running(self):
         if not DEPENDENCIES_AVAILABLE:

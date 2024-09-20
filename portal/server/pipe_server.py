@@ -20,8 +20,12 @@ except ImportError:
 
 
 class PipeServerManager:
-    def __init__(self, index):
-        self.index = index
+    def __init__(self, uuid):
+        self.uuid = uuid
+        self.connection = next(
+            (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
+            None,
+        )
         self.data_queue = queue.Queue()
         self.shutdown_event = threading.Event()
         self.pipe_handle = None
@@ -58,8 +62,7 @@ class PipeServerManager:
             return
         while not self.shutdown_event.is_set():
             try:
-                connection = bpy.context.scene.portal_connections[self.index]
-                pipe_name = rf"\\.\pipe\{connection.name}"
+                pipe_name = rf"\\.\pipe\{self.connection.name}"
                 print(f"Creating pipe: {pipe_name}")
                 self.pipe_handle = win32pipe.CreateNamedPipe(
                     pipe_name,
@@ -122,7 +125,7 @@ class PipeServerManager:
         self.shutdown_event.clear()
         self._server_thread = threading.Thread(target=self.run_server, daemon=True)
         self._server_thread.start()
-        print(f"Pipe server started for connection index: {self.index}")
+        print(f"Pipe server started for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def stop_server(self):
         self.shutdown_event.set()
@@ -136,7 +139,7 @@ class PipeServerManager:
         if self._server_thread:
             self._server_thread.join()
         self.close_handles()
-        print(f"Pipe server stopped for connection index: {self.index}")
+        print(f"Pipe server stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def is_running(self):
         if not PYWIN32_AVAILABLE:
