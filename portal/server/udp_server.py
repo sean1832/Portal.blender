@@ -8,8 +8,12 @@ from ..handlers.binary_handler import BinaryHandler
 
 
 class UDPServerManager:
-    def __init__(self, index):
-        self.index = index
+    def __init__(self, uuid):
+        self.uuid = uuid
+        self.connection = next(
+            (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
+            None,
+        )
         self.data_queue = queue.Queue()
         self.shutdown_event = threading.Event()
         self._server_thread = None
@@ -34,9 +38,8 @@ class UDPServerManager:
 
     def run_server(self):
         try:
-            connection = bpy.context.scene.portal_connections[self.index]
-            host = "0.0.0.0" if connection.is_external else "localhost"
-            port = connection.port  # use the connection-specific port
+            host = "0.0.0.0" if self.connection.is_external else "localhost"
+            port = self.connection.port  # use the connection-specific port
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._sock.bind((host, port))
             self._sock.settimeout(1)  # set a timeout to allow graceful shutdown
@@ -52,7 +55,7 @@ class UDPServerManager:
         self.shutdown_event.clear()
         self._server_thread = threading.Thread(target=self.run_server, daemon=True)
         self._server_thread.start()
-        print(f"UDP server started for connection index: {self.index}")
+        print(f"UDP server started for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def stop_server(self):
         self.shutdown_event.set()
@@ -60,7 +63,7 @@ class UDPServerManager:
             self._server_thread.join()
         if self._sock:
             self._sock.close()
-        print(f"UDP server stopped for connection index: {self.index}")
+        print(f"UDP server stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def is_running(self):
         return self._server_thread is not None and self._server_thread.is_alive()

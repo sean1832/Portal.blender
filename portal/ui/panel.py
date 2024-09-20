@@ -1,4 +1,5 @@
 import queue
+import uuid
 
 import bpy
 
@@ -10,6 +11,7 @@ MODAL_OPERATORS = {}
 
 # Custom property group to hold connection properties
 class PortalConnection(bpy.types.PropertyGroup):
+    uuid: bpy.props.StringProperty(default=str(uuid.uuid4()))  # type: ignore
     connection_type: bpy.props.EnumProperty(
         name="Connection Type",
         description="Choose the type of connection",
@@ -49,6 +51,7 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
         # Check if there are any existing connections
         connections = context.scene.portal_connections
         new_connection = connections.add()
+        new_connection.uuid = str(uuid.uuid4())
         new_connection.name = f"channel-{len(connections)}"
         new_connection.port = 6000 + len(connections) - 1
 
@@ -60,32 +63,37 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
         return {"FINISHED"}
 
 
-# Operator to remove selected connection
 class PORTAL_OT_RemoveConnection(bpy.types.Operator):
     bl_idname = "portal.remove_connection"
     bl_label = "Remove Selected Connection"
     bl_description = "Remove the selected connection"
-    index: bpy.props.IntProperty()  # type: ignore
+    uuid: bpy.props.StringProperty()  # type: ignore
 
     def execute(self, context):
         global MODAL_OPERATORS
-        connection = context.scene.portal_connections[self.index]
-        
-        # Check if the server is running and stop it before removing the connection
-        if connection.running:
-            server_manager = get_server_manager(connection.connection_type, self.index)
-            if server_manager and server_manager.is_running():
-                server_manager.stop_server()
-                connection.running = False
-                remove_server_manager(self.index)
+        # Find the connection with the given UUID
+        connection = next(
+            (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
+        )
 
-            # Cancel the modal operator if it is running
-            if self.index in MODAL_OPERATORS:
-                modal_operator = MODAL_OPERATORS[self.index]
-                modal_operator.cancel(context)
+        if connection:
+            index = context.scene.portal_connections.find(connection.name)
+            server_manager = get_server_manager(connection.connection_type, self.uuid)
 
-        # Now safe to remove the connection
-        context.scene.portal_connections.remove(self.index)
+            # Stop the server if it's running
+            if connection.running:
+                if server_manager and server_manager.is_running():
+                    server_manager.stop_server()
+                    connection.running = False
+                    remove_server_manager(self.uuid)
+
+                # Cancel the modal operator if it is running
+                if uuid in MODAL_OPERATORS:
+                    modal_operator = MODAL_OPERATORS[uuid]
+                    modal_operator.cancel(context)
+
+            # Now safe to remove the connection
+            context.scene.portal_connections.remove(index)
         return {"FINISHED"}
 
 
@@ -94,25 +102,29 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
     bl_idname = "portal.toggle_server"
     bl_label = "Start/Stop Server"
     bl_description = "Start or stop the selected server"
-    index: bpy.props.IntProperty()  # type: ignore
+    uuid: bpy.props.StringProperty()  # type: ignore
 
     def execute(self, context):
-        connection = context.scene.portal_connections[self.index]
-        server_manager = get_server_manager(connection.connection_type, self.index)
+        connection = next(
+            (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
+        )
 
-        if connection.running:
-            # Stop the server if it's running
-            if server_manager and server_manager.is_running():
-                server_manager.stop_server()
-                connection.running = False
-                remove_server_manager(self.index)  # Remove the manager from SERVER_MANAGERS
-        else:
-            # Start the server if it's not running
-            if server_manager and not server_manager.is_running():
-                server_manager.start_server()
-                # Start a unique modal operator for this instance
-                bpy.ops.wm.modal_operator("INVOKE_DEFAULT", index=self.index)
-                connection.running = True
+        if connection:
+            server_manager = get_server_manager(connection.connection_type, self.uuid)
+
+            if connection.running or (server_manager and server_manager.is_running()):
+                # Stop the server if it's running
+                if server_manager and server_manager.is_running():
+                    server_manager.stop_server()
+                    connection.running = False
+                    remove_server_manager(self.uuid)  # Remove the manager from SERVER_MANAGERS
+            else:
+                # Start the server if it's not running
+                if server_manager and not server_manager.is_running():
+                    server_manager.start_server()
+                    bpy.ops.wm.modal_operator("INVOKE_DEFAULT", uuid=self.uuid)
+                    connection.running = True
+
         return {"FINISHED"}
 
 
@@ -122,20 +134,23 @@ class ModalOperator(bpy.types.Operator):
     bl_label = "Listener Modal Operator"
     bl_description = "Modal operator to handle server events"
 
-    index: bpy.props.IntProperty()  # type: ignore
+    uuid: bpy.props.StringProperty()  # type: ignore
 
     def __init__(self):
         self._timer = None
 
     def modal(self, context, event):
+        connection = next(
+            (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
+        )
+
         # Check if the connection still exists
-        if self.index >= len(context.scene.portal_connections):
-            # Connection has been removed; cancel the modal operator
+        if connection is None:
+            # If the connection has been removed, cancel the modal operator
             self.cancel(context)
             return {"CANCELLED"}
 
-        connection = context.scene.portal_connections[self.index]
-        server_manager = get_server_manager(connection.connection_type, self.index)
+        server_manager = get_server_manager(connection.connection_type, self.uuid)
 
         if server_manager and server_manager.is_shutdown():
             self.cancel(context)
@@ -146,7 +161,7 @@ class ModalOperator(bpy.types.Operator):
                 try:
                     data = server_manager.data_queue.get_nowait()
                     StringHandler.handle_string(
-                        data, connection.data_type, self.index, connection.name
+                        data, connection.data_type, self.uuid, connection.name
                     )
                 except queue.Empty:
                     break
@@ -154,14 +169,16 @@ class ModalOperator(bpy.types.Operator):
 
     def execute(self, context):
         global MODAL_OPERATORS
-        connection = context.scene.portal_connections[self.index]
+        connection = next(
+            (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
+        )
         self._timer = context.window_manager.event_timer_add(
             connection.event_timer, window=context.window
         )
         context.window_manager.modal_handler_add(self)
 
         # Store this modal operator in the global dictionary
-        MODAL_OPERATORS[self.index] = self
+        MODAL_OPERATORS[self.uuid] = self
 
         return {"RUNNING_MODAL"}
 
@@ -172,8 +189,8 @@ class ModalOperator(bpy.types.Operator):
         self._timer = None
 
         # Remove the modal operator from the dictionary
-        if self.index in MODAL_OPERATORS:
-            del MODAL_OPERATORS[self.index]
+        if self.uuid in MODAL_OPERATORS:
+            del MODAL_OPERATORS[self.uuid]
 
         return {"CANCELLED"}
 
@@ -209,8 +226,8 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 text="Start" if not connection.running else "Stop",
                 icon="PLAY" if not connection.running else "PAUSE",
                 depress=True if connection.running else False,  # Highlight button if running
-            ).index = index
-            row.operator("portal.remove_connection", text="", icon="X").index = index
+            ).uuid = connection.uuid
+            row.operator("portal.remove_connection", text="", icon="X").uuid = connection.uuid
 
             if connection.show_details:
                 # split layout into left and right for detailed settings
@@ -258,7 +275,7 @@ def register_ui():
     bpy.utils.register_class(PORTAL_PT_ServerControl)
 
     bpy.types.Scene.portal_connections = bpy.props.CollectionProperty(type=PortalConnection)
-    bpy.types.Scene.portal_active_connection_index = bpy.props.IntProperty()
+    bpy.types.Scene.portal_active_connection_uuid = bpy.props.StringProperty(default="")
 
 
 def unregister_ui():
@@ -270,4 +287,4 @@ def unregister_ui():
     bpy.utils.unregister_class(PORTAL_PT_ServerControl)
 
     del bpy.types.Scene.portal_connections
-    del bpy.types.Scene.portal_active_connection_index
+    del bpy.types.Scene.portal_active_connection_uuid

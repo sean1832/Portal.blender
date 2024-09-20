@@ -10,7 +10,7 @@ from ..data_struct.mesh import Mesh
 
 class StringHandler:
     @staticmethod
-    def handle_string(payload, data_type, index, channel_name):
+    def handle_string(payload, data_type, uuid, channel_name):
         """Handle generic string data for different types."""
         if payload is None:
             return
@@ -48,7 +48,7 @@ class StringHandler:
                 layer_path, layer_mat = channel_name, None
             mesh.create_or_replace(object_name=f"obj_{i}_{channel_name}", layer_path=layer_path)
 
-            if metadata.get("Material"):
+            if metadata and metadata["Material"]:
                 # if material is string
                 if isinstance(metadata["Material"], str):
                     mesh.apply_material(metadata["Material"])
