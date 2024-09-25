@@ -275,6 +275,15 @@ class ModalOperator(bpy.types.Operator):
                     )
                 except queue.Empty:
                     break
+                except Exception as e:
+                    self.report({"ERROR"}, f"Error handling string: {e}")
+                    if server_manager and server_manager.is_running():
+                        server_manager.stop_server()
+                        connection.running = False
+                        remove_server_manager(self.uuid)
+                    self.cancel(context)
+                    print(f"Error handling string: {e}")
+                    return {"CANCELLED"}
         return {"PASS_THROUGH"}
 
     def execute(self, context):
