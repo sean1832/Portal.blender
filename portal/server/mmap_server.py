@@ -2,6 +2,7 @@ import mmap
 import queue
 import threading
 import time
+import traceback
 
 import bpy  # type: ignore
 
@@ -21,6 +22,9 @@ class MMFServerManager:
         self._server_thread = None
         self._last_checksum = None
         self.mmf = None
+        self.error = None
+        self.traceback = None
+        self.error_lock = threading.Lock()
 
     def handle_raw_bytes(self):
         try:
@@ -56,9 +60,14 @@ class MMFServerManager:
                         + "'[2b byte[] magic_num] [1b bool isCompressed] [1b bool isEncrypted] [2b int16 checksum] [4b int32 size] [payload]'"
                     )
         except ValueError as ve:
-            raise RuntimeError(f"Value Error in handle_mmf_data: {ve}")
+            with self.error_lock:
+                self.traceback = traceback.format_exc()
+                self.error = ve
+            print
         except Exception as e:
-            raise RuntimeError(f"Error in handle_mmf_data: {e}")
+            with self.error_lock:
+                self.traceback = traceback.format_exc()
+                self.error = e
 
     def run_server(self):
         while not self.shutdown_event.is_set():
@@ -68,10 +77,11 @@ class MMFServerManager:
                 self.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
                 self.handle_raw_bytes()
             except Exception as e:
+                with self.error_lock:
+                    self.traceback = traceback.format_exc()
+                    self.error = e
                 if self.shutdown_event.is_set():
                     break
-                time.sleep(1)
-                raise RuntimeError(f"Error creating or handling MMF: {e}")
             finally:
                 self.close_mmf()
 

@@ -1,23 +1,22 @@
 import json
 from typing import Tuple
 
-import bpy
-
 from ..data_struct.camera import Camera
 from ..data_struct.material import Material
 from ..data_struct.mesh import Mesh
+from ..utils.handler_loader import load_handler_from_text_block
 
 
 class StringHandler:
     @staticmethod
-    def handle_string(payload, data_type, uuid, channel_name):
+    def handle_string(payload, data_type, uuid, channel_name, handler_src):
         """Handle generic string data for different types."""
         if payload is None:
             return
 
         try:
             if data_type == "Custom":
-                StringHandler._handle_custom_data(payload, channel_name)
+                StringHandler._handle_custom_data(payload, channel_name, uuid, handler_src)
             elif data_type == "Mesh":
                 StringHandler._handle_mesh_data(payload, channel_name)
             elif data_type == "Camera":
@@ -26,14 +25,21 @@ class StringHandler:
             raise ValueError(f"Unsupported data: {payload}")
 
     @staticmethod
-    def _handle_custom_data(payload, channel_name):
-        """Write custom payload data to Blender text block."""
-        text_block_name = f"{channel_name}"
-        if text_block_name not in bpy.data.texts:
-            bpy.data.texts.new(text_block_name)
-        bpy.data.texts[text_block_name].clear()
-        bpy.data.texts[text_block_name].write(payload)
-        print(f"Write to text block: {text_block_name}")
+    def _handle_custom_data(payload, channel_name, uuid, handler_src):
+        if not handler_src:
+            raise ValueError("Handler source is empty.")
+        module = load_handler_from_text_block(handler_src)
+        if not module:
+            raise ImportError("Module not found.")
+        CustomHandler = module.get("CustomHandler", None)
+        if not CustomHandler:
+            raise ImportError(
+                "CustomHandler class not found. Please refer to template (https://github.com/sean1832/portal.blender/blob/main/templates/custom_data_handler.py)"
+            )
+
+        handler = CustomHandler()
+        handler.update(payload, channel_name, uuid)
+        handler.handle()
 
     @staticmethod
     def _handle_mesh_data(payload, channel_name):

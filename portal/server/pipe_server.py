@@ -1,6 +1,6 @@
 import queue
 import threading
-import time
+import traceback
 
 import bpy  # type: ignore
 
@@ -31,6 +31,9 @@ class PipeServerManager:
         self.pipe_handle = None
         self.pipe_event = None
         self._server_thread = None
+        self.error = None
+        self.traceback = None
+        self.error_lock = threading.Lock()
 
     def handle_raw_bytes(self, pipe):
         if not PYWIN32_AVAILABLE:
@@ -55,7 +58,9 @@ class PipeServerManager:
                         break
                     raise
         except Exception as e:
-            raise RuntimeError(f"Error in handle_raw_bytes: {e}")
+            with self.error_lock:
+                self.traceback = traceback.format_exc()
+                self.error = e
 
     def run_server(self):
         if not PYWIN32_AVAILABLE:
@@ -80,7 +85,6 @@ class PipeServerManager:
                 overlapped = pywintypes.OVERLAPPED()
                 overlapped.hEvent = self.pipe_event
                 win32pipe.ConnectNamedPipe(self.pipe_handle, overlapped)
-
                 while not self.shutdown_event.is_set():
                     rc = win32event.WaitForSingleObject(self.pipe_event, 100)
                     if rc == win32event.WAIT_OBJECT_0:
@@ -90,10 +94,14 @@ class PipeServerManager:
 
             except pywintypes.error as e:
                 if e.winerror != 233:  # Not DisconnectedNamedPipe
-                    print(f"Error creating or handling pipe: {e}")
+                    with self.error_lock:
+                        self.traceback = traceback.format_exc()
+                        self.error = e
                 if self.shutdown_event.is_set():
                     break
-                time.sleep(1)
+            except Exception as e:
+                with self.error_lock:
+                    self.error = e
             finally:
                 self.close_handles()
 
