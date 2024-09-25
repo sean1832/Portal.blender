@@ -9,6 +9,14 @@ from ..utils.managers import get_server_manager, remove_server_manager
 MODAL_OPERATORS = {}
 
 
+def is_connection_duplicated(connections, name_to_check, uuid_to_ignore=None):
+    """Helper function to check if a connection name is duplicated"""
+    for conn in connections:
+        if conn.name == name_to_check and conn.uuid != uuid_to_ignore:
+            return True
+    return False
+
+
 # Custom property group to hold connection properties
 class PortalConnection(bpy.types.PropertyGroup):
     uuid: bpy.props.StringProperty(default=str(uuid.uuid4()))  # type: ignore
@@ -40,7 +48,6 @@ class PortalConnection(bpy.types.PropertyGroup):
     running: bpy.props.BoolProperty(name="Running", default=False)  # type: ignore
     show_details: bpy.props.BoolProperty(name="Show Details", default=True)  # type: ignore
     custom_handler: bpy.props.StringProperty(name="Custom Handler", default="")  # type: ignore
-    text_handler: bpy.props.StringProperty(name="Text Handler", default="")  # type: ignore
 
 
 # Operator to add new connection
@@ -52,9 +59,14 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
     def execute(self, context):
         # Check if there are any existing connections
         connections = context.scene.portal_connections
+        new_name = f"channel-{len(connections) + 1}"
+        if is_connection_duplicated(connections, new_name):
+            self.report({"ERROR"}, f"Connection name '{new_name}' already exists!")
+            return {"CANCELLED"}
+
         new_connection = connections.add()
         new_connection.uuid = str(uuid.uuid4())
-        new_connection.name = f"channel-{len(connections)}"
+        new_connection.name = new_name
         new_connection.port = 6000 + len(connections) - 1
 
         if len(connections) > 1:
@@ -111,21 +123,30 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
 
-        if connection:
-            server_manager = get_server_manager(connection.connection_type, self.uuid)
+        if not connection:
+            self.report({"ERROR"}, "Connection not found!")
+            return {"CANCELLED"}
 
-            if connection.running or (server_manager and server_manager.is_running()):
-                # Stop the server if it's running
-                if server_manager and server_manager.is_running():
-                    server_manager.stop_server()
-                    connection.running = False
-                    remove_server_manager(self.uuid)  # Remove the manager from SERVER_MANAGERS
-            else:
-                # Start the server if it's not running
-                if server_manager and not server_manager.is_running():
-                    server_manager.start_server()
-                    bpy.ops.wm.modal_operator("INVOKE_DEFAULT", uuid=self.uuid)
-                    connection.running = True
+        if is_connection_duplicated(
+            context.scene.portal_connections, connection.name, connection.uuid
+        ):
+            self.report({"ERROR"}, f"Connection name '{connection.name}' already exists!")
+            return {"CANCELLED"}
+
+        server_manager = get_server_manager(connection.connection_type, self.uuid)
+
+        if connection.running or (server_manager and server_manager.is_running()):
+            # Stop the server if it's running
+            if server_manager and server_manager.is_running():
+                server_manager.stop_server()
+                connection.running = False
+                remove_server_manager(self.uuid)  # Remove the manager from SERVER_MANAGERS
+        else:
+            # Start the server if it's not running
+            if server_manager and not server_manager.is_running():
+                server_manager.start_server()
+                bpy.ops.wm.modal_operator("INVOKE_DEFAULT", uuid=self.uuid)
+                connection.running = True
 
         return {"FINISHED"}
 
@@ -161,12 +182,12 @@ class PORTAL_OT_LoadFileToTextBlock(bpy.types.Operator):
 
         text_block.from_string(content)
 
-        # Set the connection's text_handler property to reference the loaded text block
+        # Set the connection's custom_handler property to reference the loaded text block
         connection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
         if connection:
-            connection.text_handler = text_name
+            connection.custom_handler = text_name
 
         self.report({"INFO"}, f"Loaded '{text_name}' into Blender Text Editor.")
         return {"FINISHED"}
@@ -250,7 +271,7 @@ class ModalOperator(bpy.types.Operator):
                         connection.data_type,
                         self.uuid,
                         connection.name,
-                        connection.text_handler,
+                        connection.custom_handler,
                     )
                 except queue.Empty:
                     break
@@ -355,17 +376,19 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                     row = col_right.row(align=True)
                     split = row.split(factor=0.85)  # Adjust the factor to control the width ratio
 
-                    split.prop_search(connection, "text_handler", bpy.data, "texts", text="")
+                    split.prop_search(connection, "custom_handler", bpy.data, "texts", text="")
 
                     # Load file button on the right
                     split.operator(
-                        "portal.load_file_to_text_block", text="", icon="FILEBROWSER", 
+                        "portal.load_file_to_text_block",
+                        text="",
+                        icon="FILEBROWSER",
                     ).uuid = connection.uuid
 
-                    if connection.text_handler:
+                    if connection.custom_handler:
                         col_right.operator(
                             "portal.open_text_editor", text="Open in Text Editor"
-                        ).text_name = connection.text_handler
+                        ).text_name = connection.custom_handler
 
                 box.prop(connection, "event_timer")
 
