@@ -43,10 +43,12 @@ If this is your first time installing the Portal add-on, you will need to instal
 ### Custom Handlers
 You can create custom handlers to manipulate the data that is received. To do this, follow these steps:
 1. Copy and paste the [template code](/templates/custom_data_handler.py) into blender's text editor.
-2. Modify the `custom_data_handler` function with your custom logic.
-3. Run the script to register the custom handler.
-4. Locate the `Portal.custom` panel in the `3D View` sidebar.
+2. Modify the `CustomHandler.handle` method with your custom logic.
+3. Select `Custom` from the `Connection Type` dropdown menu.
+4. Select the custom script from the `Handler` field.
+5. Click `Start Server` to start the server.
 
+![alt text](/doc/images/custom-handler.png)
 
 ## Documentation
 For more information, visit the [Portal](https://github.com/sean1832/portal).
