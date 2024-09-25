@@ -1,6 +1,7 @@
 import queue
 import socket
 import threading
+import traceback
 
 import bpy  # type: ignore
 
@@ -18,6 +19,9 @@ class UDPServerManager:
         self.shutdown_event = threading.Event()
         self._server_thread = None
         self._sock = None
+        self.error = None
+        self.traceback = None
+        self.error_lock = threading.Lock()
 
     def udp_handler(self):
         while not self.shutdown_event.is_set():
@@ -34,7 +38,9 @@ class UDPServerManager:
             except socket.timeout:
                 continue
             except Exception as e:
-                raise RuntimeError(f"Error in udp_handler: {e}")
+                with self.error_lock:
+                    self.traceback = traceback.format_exc()
+                    self.error = RuntimeError(f"Error handling UDP packet: {e}")
 
     def run_server(self):
         try:
@@ -46,7 +52,9 @@ class UDPServerManager:
 
             self.udp_handler()
         except Exception as e:
-            raise RuntimeError(f"Error creating or handling UDP server: {e}")
+            with self.error_lock:
+                self.traceback = traceback.format_exc()
+                self.error = RuntimeError(f"Error creating or handling UDP server: {e}")
         finally:
             if self._sock:
                 self._sock.close()

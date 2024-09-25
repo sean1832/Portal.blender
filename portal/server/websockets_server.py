@@ -1,6 +1,7 @@
 import asyncio
 import queue
 import threading
+import traceback
 
 import bpy  # type: ignore
 
@@ -30,6 +31,9 @@ class WebSocketServerManager:
         self._runner = None
         self._site = None
         self.loop = None  # asyncio loop reference
+        self.error = None
+        self.traceback = None
+        self.error_lock = threading.Lock()
 
     async def websocket_handler(self, request):
         if not DEPENDENCIES_AVAILABLE:
@@ -57,7 +61,9 @@ class WebSocketServerManager:
                 else:
                     raise ValueError(f"Unsupported message type: {msg.type}")
         except Exception as e:
-            raise RuntimeError(f"Unhandled exception in websocket_handler: {e}")
+            with self.error_lock:
+                self.traceback = traceback.format_exc()
+                self.error = RuntimeError(f"Error handling WebSocket message: {e}")
         finally:
             await ws.close()
         return ws
@@ -87,7 +93,9 @@ class WebSocketServerManager:
 
             await self._runner.cleanup()
         except Exception as e:
-            raise RuntimeError(f"Error creating or handling WebSocket server: {e}")
+            with self.error_lock:
+                self.traceback = traceback.format_exc()
+                self.error = RuntimeError(f"Error creating or handling WebSocket server: {e}")
 
     def start_server(self):
         if not DEPENDENCIES_AVAILABLE:

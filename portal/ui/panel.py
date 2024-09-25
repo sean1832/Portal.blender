@@ -1,4 +1,5 @@
 import queue
+import traceback
 import uuid
 
 import bpy
@@ -263,6 +264,17 @@ class ModalOperator(bpy.types.Operator):
             return {"CANCELLED"}
 
         if event.type == "TIMER" and connection.running:
+            with server_manager.error_lock:
+                error = server_manager.error
+                server_traceback = server_manager.traceback
+            if error:
+                return self.report_error(
+                    context,
+                    f"Error in server: {error}",
+                    server_manager,
+                    connection,
+                    server_traceback,
+                )
             while not server_manager.data_queue.empty():
                 try:
                     data = server_manager.data_queue.get_nowait()
@@ -276,14 +288,13 @@ class ModalOperator(bpy.types.Operator):
                 except queue.Empty:
                     break
                 except Exception as e:
-                    self.report({"ERROR"}, f"Error handling string: {e}")
-                    if server_manager and server_manager.is_running():
-                        server_manager.stop_server()
-                        connection.running = False
-                        remove_server_manager(self.uuid)
-                    self.cancel(context)
-                    print(f"Error handling string: {e}")
-                    return {"CANCELLED"}
+                    return self.report_error(
+                        context,
+                        f"Error handling string: {e}",
+                        server_manager,
+                        connection,
+                        traceback=traceback.format_exc(),
+                    )
         return {"PASS_THROUGH"}
 
     def execute(self, context):
@@ -311,6 +322,16 @@ class ModalOperator(bpy.types.Operator):
         if self.uuid in MODAL_OPERATORS:
             del MODAL_OPERATORS[self.uuid]
 
+        return {"CANCELLED"}
+
+    def report_error(self, context, message, server_manager, connection, traceback=None):
+        self.report({"ERROR"}, message)
+        print(traceback) if traceback else print(message)
+        if server_manager.is_running():
+            server_manager.stop_server()
+        connection.running = False
+        remove_server_manager(self.uuid)
+        self.cancel(context)
         return {"CANCELLED"}
 
 
