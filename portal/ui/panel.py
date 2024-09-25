@@ -39,6 +39,8 @@ class PortalConnection(bpy.types.PropertyGroup):
     event_timer: bpy.props.FloatProperty(name="Interval (sec)", default=0.01, min=0.001, max=1.0)  # type: ignore
     running: bpy.props.BoolProperty(name="Running", default=False)  # type: ignore
     show_details: bpy.props.BoolProperty(name="Show Details", default=True)  # type: ignore
+    custom_handler: bpy.props.StringProperty(name="Custom Handler", default="")  # type: ignore
+    text_handler: bpy.props.StringProperty(name="Text Handler", default="")  # type: ignore
 
 
 # Operator to add new connection
@@ -128,6 +130,89 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# Add operator to load a local file into a Blender text block
+class PORTAL_OT_LoadFileToTextBlock(bpy.types.Operator):
+    bl_idname = "portal.load_file_to_text_block"
+    bl_label = "Load File to Text Block"
+    bl_description = "Load a file from your local system into a Blender text block"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
+    uuid: bpy.props.StringProperty()  # type: ignore
+
+    def execute(self, context):
+        # Check if the file exists and can be read
+        try:
+            with open(self.filepath, "r") as file:
+                content = file.read()
+        except FileNotFoundError:
+            self.report({"ERROR"}, "File not found!")
+            return {"CANCELLED"}
+        except IOError:
+            self.report({"ERROR"}, "Cannot read the file!")
+            return {"CANCELLED"}
+
+        # Create or update a Blender text block
+        text_name = bpy.path.basename(self.filepath)
+        if text_name in bpy.data.texts:
+            text_block = bpy.data.texts[text_name]
+            text_block.clear()  # Clear existing content
+        else:
+            text_block = bpy.data.texts.new(text_name)
+
+        text_block.from_string(content)
+
+        # Set the connection's text_handler property to reference the loaded text block
+        connection = next(
+            (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
+        )
+        if connection:
+            connection.text_handler = text_name
+
+        self.report({"INFO"}, f"Loaded '{text_name}' into Blender Text Editor.")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)  # Open file browser
+        return {"RUNNING_MODAL"}
+
+
+class PORTAL_OT_OpenTextEditor(bpy.types.Operator):
+    bl_idname = "portal.open_text_editor"
+    bl_label = "Open Text in Editor"
+    bl_description = "Open the selected text block in Blender's text editor"
+
+    text_name: bpy.props.StringProperty()  # type: ignore
+
+    def execute(self, context):
+        text = bpy.data.texts.get(self.text_name)
+        if not text:
+            self.report({"WARNING"}, f"Text block '{self.text_name}' not found!")
+            return {"CANCELLED"}
+
+        # Try to find an existing Text Editor area
+        for area in context.screen.areas:
+            if area.type == "TEXT_EDITOR":
+                area.spaces.active.text = text
+                return {"FINISHED"}
+
+        # Try to find a non-critical area (e.g., VIEW_3D or OUTLINER) to turn into a TEXT_EDITOR
+        for area in context.screen.areas:
+            if area.type not in {"PROPERTIES", "OUTLINER", "PREFERENCES", "INFO"}:
+                area.type = "TEXT_EDITOR"
+                area.spaces.active.text = text
+                return {"FINISHED"}
+
+        # If no suitable area, open a new window with a TEXT_EDITOR
+        new_window = bpy.ops.screen.area_split(direction="VERTICAL", factor=0.5)
+        if new_window == "FINISHED":
+            for area in context.screen.areas:
+                if area.type == "TEXT_EDITOR":
+                    area.spaces.active.text = text
+                    break
+
+        return {"FINISHED"}
+
+
 # Modal operator for server event handling
 class ModalOperator(bpy.types.Operator):
     bl_idname = "wm.modal_operator"
@@ -161,7 +246,11 @@ class ModalOperator(bpy.types.Operator):
                 try:
                     data = server_manager.data_queue.get_nowait()
                     StringHandler.handle_string(
-                        data, connection.data_type, self.uuid, connection.name
+                        data,
+                        connection.data_type,
+                        self.uuid,
+                        connection.name,
+                        connection.text_handler,
                     )
                 except queue.Empty:
                     break
@@ -260,6 +349,24 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 col_left.label(text="Data Type")
                 col_right.prop(connection, "data_type", text="")
 
+                if connection.data_type == "Custom":
+                    col_left.label(text="Handler")
+                    # Create a row with a split layout to have prop_search and button side by side
+                    row = col_right.row(align=True)
+                    split = row.split(factor=0.85)  # Adjust the factor to control the width ratio
+
+                    split.prop_search(connection, "text_handler", bpy.data, "texts", text="")
+
+                    # Load file button on the right
+                    split.operator(
+                        "portal.load_file_to_text_block", text="", icon="FILEBROWSER", 
+                    ).uuid = connection.uuid
+
+                    if connection.text_handler:
+                        col_right.operator(
+                            "portal.open_text_editor", text="Open in Text Editor"
+                        ).text_name = connection.text_handler
+
                 box.prop(connection, "event_timer")
 
         layout.operator("portal.add_connection", text="Add New Connection", icon="ADD")
@@ -273,6 +380,8 @@ def register_ui():
     bpy.utils.register_class(PORTAL_OT_ToggleServer)
     bpy.utils.register_class(ModalOperator)
     bpy.utils.register_class(PORTAL_PT_ServerControl)
+    bpy.utils.register_class(PORTAL_OT_OpenTextEditor)
+    bpy.utils.register_class(PORTAL_OT_LoadFileToTextBlock)
 
     bpy.types.Scene.portal_connections = bpy.props.CollectionProperty(type=PortalConnection)
     bpy.types.Scene.portal_active_connection_uuid = bpy.props.StringProperty(default="")
@@ -285,6 +394,8 @@ def unregister_ui():
     bpy.utils.unregister_class(PORTAL_OT_ToggleServer)
     bpy.utils.unregister_class(ModalOperator)
     bpy.utils.unregister_class(PORTAL_PT_ServerControl)
+    bpy.utils.unregister_class(PORTAL_OT_OpenTextEditor)
+    bpy.utils.unregister_class(PORTAL_OT_LoadFileToTextBlock)
 
     del bpy.types.Scene.portal_connections
     del bpy.types.Scene.portal_active_connection_uuid
