@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import bpy  # type: ignore
 
-from .ui.panel import register_ui, unregister_ui
+import portal.ui as ui
 
 bl_info = {
     "name": "Portal",
@@ -204,13 +204,13 @@ def safe_unregister_class(cls):
 def register():
     register_dependencies()
     if DependencyManager.are_dependencies_installed():
-        register_ui()
+        ui.register()
 
 
 def unregister():
     safe_unregister_class(RestartBlenderOperator)
     if DependencyManager.are_dependencies_installed():
-        unregister_ui()
+        ui.unregister()
     unregister_dependencies()
 
 
