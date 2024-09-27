@@ -34,7 +34,13 @@ class Packet:
     MAGIC_NUMBER = b"pk"  # pk
 
     def __init__(
-        self, data, size=None, checksum=None, is_encrypted=None, is_compressed=None, header=None
+        self,
+        data: bytes,
+        size: int | None = None,
+        checksum: int | None = None,
+        is_encrypted: bool | None = None,
+        is_compressed: bool | None = None,
+        header: PacketHeader | None = None,
     ):
         self.data = data
         if header is not None:
@@ -43,7 +49,7 @@ class Packet:
             computed_size = size if size is not None else len(data)
             self.header = PacketHeader(is_encrypted, is_compressed, computed_size, checksum)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         header_bytes = bytearray()
         header_bytes.extend(Packet.MAGIC_NUMBER)  # magic number
         header_bytes.append(1 if self.header.is_compressed else 0)  # is_compressed flag
