@@ -4,8 +4,7 @@ import traceback
 import bpy
 
 from ...handlers.string_handler import StringHandler
-from ...server.recv_managers import get_server_manager, remove_server_manager
-from ..globals import MODAL_OPERATORS
+from ..globals import MODAL_OPERATORS, RECV_MANAGER
 
 
 # Modal operator for server event handling
@@ -30,7 +29,7 @@ class ModalOperator(bpy.types.Operator):
             self.cancel(context)
             return {"CANCELLED"}
 
-        server_manager = get_server_manager(connection.connection_type, self.uuid)
+        server_manager = RECV_MANAGER.get(connection.connection_type, self.uuid)
 
         if server_manager and server_manager.is_shutdown():
             self.cancel(context)
@@ -71,7 +70,6 @@ class ModalOperator(bpy.types.Operator):
         return {"PASS_THROUGH"}
 
     def execute(self, context):
-        global MODAL_OPERATORS
         connection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
@@ -86,7 +84,6 @@ class ModalOperator(bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
     def cancel(self, context):
-        global MODAL_OPERATORS
         if self._timer:
             context.window_manager.event_timer_remove(self._timer)
         self._timer = None
@@ -95,7 +92,8 @@ class ModalOperator(bpy.types.Operator):
         if self.uuid in MODAL_OPERATORS:
             del MODAL_OPERATORS[self.uuid]
 
-        return {"CANCELLED"}
+        #return {"CANCELLED"}
+        return None
 
     def report_error(self, context, message, server_manager, connection, traceback=None):
         self.report({"ERROR"}, message)
@@ -103,12 +101,14 @@ class ModalOperator(bpy.types.Operator):
         if server_manager.is_running():
             server_manager.stop_server()
         connection.running = False
-        remove_server_manager(self.uuid)
+        RECV_MANAGER.remove(self.uuid)
         self.cancel(context)
         return {"CANCELLED"}
 
+
 def register():
     bpy.utils.register_class(ModalOperator)
+
 
 def unregister():
     bpy.utils.unregister_class(ModalOperator)

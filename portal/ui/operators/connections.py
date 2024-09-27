@@ -1,9 +1,10 @@
-import bpy
 import uuid
 
+import bpy
+
+from ..globals import MODAL_OPERATORS, RECV_MANAGER
 from ..utils.helper import is_connection_duplicated
-from ...server.recv_managers import get_server_manager, remove_server_manager
-from ..globals import MODAL_OPERATORS
+
 
 # Operator to add new connection
 class PORTAL_OT_AddConnection(bpy.types.Operator):
@@ -39,7 +40,6 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
     uuid: bpy.props.StringProperty()  # type: ignore
 
     def execute(self, context):
-        global MODAL_OPERATORS
         # Find the connection with the given UUID
         connection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
@@ -47,14 +47,14 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
 
         if connection:
             index = context.scene.portal_connections.find(connection.name)
-            server_manager = get_server_manager(connection.connection_type, self.uuid)
+            server_manager = RECV_MANAGER.get(connection.connection_type, self.uuid)
 
             # Stop the server if it's running
             if connection.running:
                 if server_manager and server_manager.is_running():
                     server_manager.stop_server()
                     connection.running = False
-                    remove_server_manager(self.uuid)
+                    RECV_MANAGER.remove(self.uuid)
 
                 # Cancel the modal operator if it is running
                 if uuid in MODAL_OPERATORS:
@@ -64,7 +64,8 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
             # Now safe to remove the connection
             context.scene.portal_connections.remove(index)
         return {"FINISHED"}
-    
+
+
 # Operator to start/stop server
 class PORTAL_OT_ToggleServer(bpy.types.Operator):
     bl_idname = "portal.toggle_server"
@@ -87,14 +88,14 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
             self.report({"ERROR"}, f"Connection name '{connection.name}' already exists!")
             return {"CANCELLED"}
 
-        server_manager = get_server_manager(connection.connection_type, self.uuid)
+        server_manager = RECV_MANAGER.get(connection.connection_type, self.uuid)
 
         if connection.running or (server_manager and server_manager.is_running()):
             # Stop the server if it's running
             if server_manager and server_manager.is_running():
                 server_manager.stop_server()
                 connection.running = False
-                remove_server_manager(self.uuid)  # Remove the manager from SERVER_MANAGERS
+                RECV_MANAGER.remove(self.uuid)  # Remove the manager from SERVER_MANAGERS
         else:
             # Start the server if it's not running
             if server_manager and not server_manager.is_running():
@@ -104,10 +105,12 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
 
         return {"FINISHED"}
 
+
 def register():
     bpy.utils.register_class(PORTAL_OT_AddConnection)
     bpy.utils.register_class(PORTAL_OT_RemoveConnection)
     bpy.utils.register_class(PORTAL_OT_ToggleServer)
+
 
 def unregister():
     bpy.utils.unregister_class(PORTAL_OT_AddConnection)
