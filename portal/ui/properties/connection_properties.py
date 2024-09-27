@@ -37,10 +37,24 @@ class PortalConnection(bpy.types.PropertyGroup):
     show_details: bpy.props.BoolProperty(name="Show Details", default=True)
     custom_handler: bpy.props.StringProperty(name="Custom Handler", default="")
 
+    direction: bpy.props.EnumProperty(
+        name="Send/Receive",
+        description="Choose the direction of data flow",
+        items=[
+            ("RECV", "recv", "Receive data from the server", "IMPORT", 0),  # Added icon 'IMPORT'
+            ("SEND", "send", "Send data to the server", "EXPORT", 1),  # Added icon 'EXPORT'
+        ],
+        default="RECV",
+    )
+
+    send_data: bpy.props.StringProperty(name="Send Data", default="")
+
+
 def register():
     bpy.utils.register_class(PortalConnection)
     bpy.types.Scene.portal_connections = bpy.props.CollectionProperty(type=PortalConnection)
     bpy.types.Scene.portal_active_connection_uuid = bpy.props.StringProperty(default="")
+
 
 def unregister():
     bpy.utils.unregister_class(PortalConnection)

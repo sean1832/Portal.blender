@@ -1,5 +1,6 @@
 import bpy
 
+
 # Main panel to show connections
 class PORTAL_PT_ServerControl(bpy.types.Panel):
     bl_label = "Portal Server"
@@ -42,8 +43,12 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 sub_box = box.column(align=True)  # Aligning columns for compactness
                 sub_box.use_property_split = True
 
+                # Change here: make the enum appear side by side
+                row = sub_box.row(align=True)  # Create a new row for side-by-side layout
+                row.prop(connection, "direction", expand=True)
+                sub_box.separator()
                 sub_box.prop(connection, "connection_type", text="Connection")
-                
+
                 # Connection settings based on type
                 if connection.connection_type == "NAMED_PIPE":
                     sub_box.prop(connection, "name", text="Pipe Name")
@@ -59,23 +64,28 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                     row.prop(connection, "port", text="Port")
                     row.prop(connection, "is_external", text="Remote")
 
-                sub_box.prop(connection, "data_type", text="Data Type")
+                if connection.direction == "RECV":
+                    sub_box.prop(connection, "data_type", text="Data Type")
+                    if connection.data_type == "Custom":
+                        # Handler with prop_search and file browser icon in a compact row
+                        row = sub_box.row(align=True)
+                        row.prop_search(
+                            connection, "custom_handler", bpy.data, "texts", text="Handler"
+                        )
+                        row.operator(
+                            "portal.load_file_to_text_block",
+                            text="",
+                            icon="FILEBROWSER",
+                        ).uuid = connection.uuid
 
-                if connection.data_type == "Custom":
-                    # Handler with prop_search and file browser icon in a compact row
-                    row = sub_box.row(align=True)
-                    row.prop_search(connection, "custom_handler", bpy.data, "texts", text="Handler")
-                    row.operator(
-                        "portal.load_file_to_text_block",
-                        text="",
-                        icon="FILEBROWSER",
-                    ).uuid = connection.uuid
+                        if connection.custom_handler:
+                            sub_box.operator(
+                                "portal.open_text_editor", text="Open in Text Editor"
+                            ).text_name = connection.custom_handler
+                else:
+                    sub_box.prop(connection, "send_data", text="Send Data")
 
-                    if connection.custom_handler:
-                        sub_box.operator(
-                            "portal.open_text_editor", text="Open in Text Editor"
-                        ).text_name = connection.custom_handler
-
+                sub_box.separator()
                 sub_box.prop(connection, "event_timer")
 
         layout.operator("portal.add_connection", text="Add New Connection", icon="ADD")
@@ -83,6 +93,7 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
 
 def register():
     bpy.utils.register_class(PORTAL_PT_ServerControl)
+
 
 def unregister():
     bpy.utils.unregister_class(PORTAL_PT_ServerControl)
