@@ -20,6 +20,7 @@ class PortalConnection(bpy.types.PropertyGroup):
         default="NAMED_PIPE",
     )
     name: bpy.props.StringProperty(name="Connection Name", default="testpipe")
+    host: bpy.props.StringProperty(name="Host", default="127.0.0.1")
     port: bpy.props.IntProperty(name="Port", default=6000)
     is_external: bpy.props.BoolProperty(name="Listen Remote", default=False)
     buffer_size: bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)

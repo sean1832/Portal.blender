@@ -57,12 +57,20 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                     sub_box.prop(connection, "buffer_size", text="Buffer Size (KB)")
                 elif connection.connection_type == "WEBSOCKETS":
                     row = sub_box.row(align=True)
-                    row.prop(connection, "port", text="Port")
-                    row.prop(connection, "is_external", text="Remote")
+                    if connection.direction == "SEND":
+                        row.prop(connection, "host", text="Address")
+                        row.prop(connection, "port", text="Port")
+                    else:
+                        row.prop(connection, "port", text="Port")
+                        row.prop(connection, "is_external", text="Remote")
                 elif connection.connection_type == "UDP":
                     row = sub_box.row(align=True)
-                    row.prop(connection, "port", text="Port")
-                    row.prop(connection, "is_external", text="Remote")
+                    if connection.direction == "SEND":
+                        row.prop(connection, "host", text="Address")
+                        row.prop(connection, "port", text="Port")
+                    else:
+                        row.prop(connection, "port", text="Port")
+                        row.prop(connection, "is_external", text="Remote")
 
                 if connection.direction == "RECV":
                     sub_box.prop(connection, "data_type", text="Data Type")
