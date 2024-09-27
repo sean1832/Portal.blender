@@ -1,18 +1,20 @@
 from ..mmap_server import MMFServerManager
 from ..pipe_server import PipeServerManager
+from ..sender.pipe_sender import PipeSenderManager
 from ..udp_server import UDPServerManager
 from ..websockets_server import WebSocketServerManager
 
 
-class RecvManager:
+class ConnectionManager:
     def __init__(self):
         self.managers = {}
 
-    def get(self, connection_type, uuid):
+    def get(self, connection_type, uuid, direction):
         """
         Retrieves or creates a new server manager instance for the given connection type and uuid.
         If a different connection type was previously used, it removes the old one and creates a new instance.
         """
+
         # Check if the server manager already exists for this uuid
         if uuid in self.managers:
             existing_manager, existing_type = self.managers[uuid]
@@ -25,16 +27,20 @@ class RecvManager:
         # If no server manager exists for this uuid or it was removed, create a new one
         if uuid not in self.managers:
             # Create a new server manager based on the connection type
-            if connection_type == "NAMED_PIPE":
-                manager = PipeServerManager(uuid)
-            elif connection_type == "MMAP":
-                manager = MMFServerManager(uuid)
-            elif connection_type == "WEBSOCKETS":
-                manager = WebSocketServerManager(uuid)
-            elif connection_type == "UDP":
-                manager = UDPServerManager(uuid)
+            if direction == "SEND":
+                if connection_type == "NAMED_PIPE":
+                    manager = PipeSenderManager(uuid)
             else:
-                raise ValueError(f"Unknown connection type: {connection_type}")
+                if connection_type == "NAMED_PIPE":
+                    manager = PipeServerManager(uuid)
+                elif connection_type == "MMAP":
+                    manager = MMFServerManager(uuid)
+                elif connection_type == "WEBSOCKETS":
+                    manager = WebSocketServerManager(uuid)
+                elif connection_type == "UDP":
+                    manager = UDPServerManager(uuid)
+                else:
+                    raise ValueError(f"Unknown connection type: {connection_type}")
 
             self.managers[uuid] = (manager, connection_type)
 

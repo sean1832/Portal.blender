@@ -1,4 +1,4 @@
-from ..server.managers.recv_manager import RecvManager
+from ..server.managers.connection_manager import ConnectionManager
 
 MODAL_OPERATORS = {}
-RECV_MANAGER = RecvManager()
+CONNECTION_MANAGER = ConnectionManager()
