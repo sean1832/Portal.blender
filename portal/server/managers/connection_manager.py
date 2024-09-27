@@ -1,9 +1,13 @@
 from ..mmap_server import MMFServerManager
 from ..pipe_server import PipeServerManager
-from ..sender.pipe_sender import PipeSenderManager
 from ..udp_server import UDPServerManager
 from ..websockets_server import WebSocketServerManager
 
+
+from ..sender.pipe_sender import PipeSenderManager
+from ..sender.mmap_sender import MMFSenderManager
+from ..sender.udp_sender import UDPSenderManager
+from ..sender.websockets_sender import WebSocketSenderManager
 
 class ConnectionManager:
     def __init__(self):
@@ -30,6 +34,12 @@ class ConnectionManager:
             if direction == "SEND":
                 if connection_type == "NAMED_PIPE":
                     manager = PipeSenderManager(uuid)
+                elif connection_type == "MMAP":
+                    manager = MMFSenderManager(uuid)
+                elif connection_type == "WEBSOCKETS":
+                    manager = WebSocketSenderManager(uuid)
+                elif connection_type == "UDP":
+                    manager = UDPSenderManager(uuid)
             else:
                 if connection_type == "NAMED_PIPE":
                     manager = PipeServerManager(uuid)

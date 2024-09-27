@@ -11,9 +11,9 @@ from ...utils.crypto import Crc16
 
 try:
     import pywintypes  # type: ignore
+    import win32event  # type: ignore
     import win32file  # type: ignore
     import win32pipe  # type: ignore
-    import win32event  # type: ignore
 
     PYWIN32_AVAILABLE = True
 except ImportError:
@@ -93,7 +93,7 @@ class PipeSenderManager:
                         self.traceback = traceback.format_exc()
                     break
         finally:
-            self.close_handles()
+            self._close_handles()
 
     def _send(self, data: str, compress: bool = False):
         """Send data to the named pipe."""
@@ -131,7 +131,7 @@ class PipeSenderManager:
                 self.error = e
                 self.traceback = traceback.format_exc()
 
-    def close_handles(self):
+    def _close_handles(self):
         """Close the pipe handle."""
         if self.pipe_handle:
             try:
@@ -151,7 +151,7 @@ class PipeSenderManager:
         self.shutdown_event.set()
         if self._client_thread:
             self._client_thread.join()
-        self.close_handles()
+        self._close_handles()
         print(f"Pipe sender stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def is_running(self):
