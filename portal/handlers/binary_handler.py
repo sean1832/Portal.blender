@@ -23,3 +23,10 @@ class BinaryHandler:
                 return gz.read()
             except OSError:
                 return data
+    
+    @staticmethod
+    def compress(data: bytes) -> bytes:
+        with io.BytesIO() as compressed_data:
+            with gzip.GzipFile(fileobj=compressed_data, mode="wb") as gz:
+                gz.write(data)
+            return compressed_data.getvalue()
