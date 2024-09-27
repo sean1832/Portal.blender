@@ -1,7 +1,7 @@
-from .mmap_server import MMFServerManager
-from .pipe_server import PipeServerManager
-from .udp_server import UDPServerManager
-from .websockets_server import WebSocketServerManager
+from ..mmap_server import MMFServerManager
+from ..pipe_server import PipeServerManager
+from ..udp_server import UDPServerManager
+from ..websockets_server import WebSocketServerManager
 
 
 class RecvManager:

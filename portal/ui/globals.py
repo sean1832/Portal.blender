@@ -1,4 +1,4 @@
-from ..server.recv_managers import RecvManager
+from ..server.managers.recv_manager import RecvManager
 
 MODAL_OPERATORS = {}
 RECV_MANAGER = RecvManager()
