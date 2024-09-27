@@ -26,7 +26,7 @@ class MMFServerManager:
         self.traceback = None
         self.error_lock = threading.Lock()
 
-    def handle_raw_bytes(self):
+    def _handle_raw_bytes(self):
         try:
             while not self.shutdown_event.is_set():
                 self.mmf.seek(0)
@@ -69,13 +69,13 @@ class MMFServerManager:
                 self.traceback = traceback.format_exc()
                 self.error = e
 
-    def run_server(self):
+    def _run_server(self):
         while not self.shutdown_event.is_set():
             try:
                 mmf_name = self.connection.name
                 buffer_size = self.connection.buffer_size * 1024  # Convert KB to bytes
                 self.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
-                self.handle_raw_bytes()
+                self._handle_raw_bytes()
             except Exception as e:
                 with self.error_lock:
                     self.traceback = traceback.format_exc()
@@ -92,7 +92,7 @@ class MMFServerManager:
 
     def start_server(self):
         self.shutdown_event.clear()
-        self._server_thread = threading.Thread(target=self.run_server, daemon=True)
+        self._server_thread = threading.Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
         print(f"MMF server started for connection uuid: {self.uuid}, name: {self.connection.name}")
 

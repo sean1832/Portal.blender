@@ -35,7 +35,7 @@ class WebSocketServerManager:
         self.traceback = None
         self.error_lock = threading.Lock()
 
-    async def websocket_handler(self, request):
+    async def _websocket_handler(self, request):
         if not DEPENDENCIES_AVAILABLE:
             return
 
@@ -68,14 +68,14 @@ class WebSocketServerManager:
             await ws.close()
         return ws
 
-    async def run_server(self):
+    async def _run_server(self):
         if not DEPENDENCIES_AVAILABLE:
             return
 
         try:
             self._app = web.Application()
             route = "/"  # root route
-            self._app.router.add_route("GET", route, self.websocket_handler)
+            self._app.router.add_route("GET", route, self._websocket_handler)
 
             self._runner = web.AppRunner(self._app)
             await self._runner.setup()
@@ -113,7 +113,7 @@ class WebSocketServerManager:
         )
 
     def _run_loop_in_thread(self):
-        self.loop.run_until_complete(self.run_server())
+        self.loop.run_until_complete(self._run_server())
         self.loop.run_forever()
 
     async def shutdown_server(self):

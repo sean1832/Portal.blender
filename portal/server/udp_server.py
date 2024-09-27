@@ -23,7 +23,7 @@ class UDPServerManager:
         self.traceback = None
         self.error_lock = threading.Lock()
 
-    def udp_handler(self):
+    def _udp_handler(self):
         while not self.shutdown_event.is_set():
             try:
                 # 1500 is the max size of a UDP packet
@@ -42,7 +42,7 @@ class UDPServerManager:
                     self.traceback = traceback.format_exc()
                     self.error = RuntimeError(f"Error handling UDP packet: {e}")
 
-    def run_server(self):
+    def _run_server(self):
         try:
             host = "0.0.0.0" if self.connection.is_external else "localhost"
             port = self.connection.port  # use the connection-specific port
@@ -50,7 +50,7 @@ class UDPServerManager:
             self._sock.bind((host, port))
             self._sock.settimeout(1)  # set a timeout to allow graceful shutdown
 
-            self.udp_handler()
+            self._udp_handler()
         except Exception as e:
             with self.error_lock:
                 self.traceback = traceback.format_exc()
@@ -61,7 +61,7 @@ class UDPServerManager:
 
     def start_server(self):
         self.shutdown_event.clear()
-        self._server_thread = threading.Thread(target=self.run_server, daemon=True)
+        self._server_thread = threading.Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
         print(f"UDP server started for connection uuid: {self.uuid}, name: {self.connection.name}")
 
