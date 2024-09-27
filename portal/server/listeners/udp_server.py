@@ -5,10 +5,10 @@ import traceback
 
 import bpy  # type: ignore
 
-from ..handlers.binary_handler import BinaryHandler
+from ...handlers.binary_handler import BinaryHandler
 
 
-class UDPServerManager:
+class UDPListenerManager:
     def __init__(self, uuid):
         self.uuid = uuid
         self.connection = next(

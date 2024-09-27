@@ -6,11 +6,11 @@ import traceback
 
 import bpy  # type: ignore
 
-from ..data_struct.packet import Packet, PacketHeader
-from ..handlers.binary_handler import BinaryHandler
+from ...data_struct.packet import Packet, PacketHeader
+from ...handlers.binary_handler import BinaryHandler
 
 
-class MMFServerManager:
+class MMFListenerManager:
     def __init__(self, uuid):
         self.uuid = uuid
         self.connection = next(

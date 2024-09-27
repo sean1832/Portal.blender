@@ -1,13 +1,12 @@
-from ..mmap_server import MMFServerManager
-from ..pipe_server import PipeServerManager
-from ..udp_server import UDPServerManager
-from ..websockets_server import WebSocketServerManager
+from .listeners.mmap_server import MMFListenerManager
+from .listeners.pipe_server import PipeListenerManager
+from .listeners.udp_server import UDPListenerManager
+from .listeners.websockets_server import WebSocketListenerManager
+from .senders.mmap_sender import MMFSenderManager
+from .senders.pipe_sender import PipeSenderManager
+from .senders.udp_sender import UDPSenderManager
+from .senders.websockets_sender import WebSocketSenderManager
 
-
-from ..sender.pipe_sender import PipeSenderManager
-from ..sender.mmap_sender import MMFSenderManager
-from ..sender.udp_sender import UDPSenderManager
-from ..sender.websockets_sender import WebSocketSenderManager
 
 class ConnectionManager:
     def __init__(self):
@@ -42,13 +41,13 @@ class ConnectionManager:
                     manager = UDPSenderManager(uuid)
             else:
                 if connection_type == "NAMED_PIPE":
-                    manager = PipeServerManager(uuid)
+                    manager = PipeListenerManager(uuid)
                 elif connection_type == "MMAP":
-                    manager = MMFServerManager(uuid)
+                    manager = MMFListenerManager(uuid)
                 elif connection_type == "WEBSOCKETS":
-                    manager = WebSocketServerManager(uuid)
+                    manager = WebSocketListenerManager(uuid)
                 elif connection_type == "UDP":
-                    manager = UDPServerManager(uuid)
+                    manager = UDPListenerManager(uuid)
                 else:
                     raise ValueError(f"Unknown connection type: {connection_type}")
 

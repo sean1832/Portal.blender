@@ -4,8 +4,8 @@ import traceback
 
 import bpy  # type: ignore
 
-from ..data_struct.packet import Packet, PacketHeader
-from ..handlers.binary_handler import BinaryHandler
+from ...data_struct.packet import Packet, PacketHeader
+from ...handlers.binary_handler import BinaryHandler
 
 # Attempt to import the pywin32 modules safely
 try:
@@ -19,7 +19,7 @@ except ImportError:
     PYWIN32_AVAILABLE = False
 
 
-class PipeServerManager:
+class PipeListenerManager:
     def __init__(self, uuid):
         self.uuid = uuid
         self.connection = next(

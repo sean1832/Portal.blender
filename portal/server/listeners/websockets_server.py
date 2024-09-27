@@ -13,11 +13,11 @@ try:
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
 
-from ..data_struct.packet import Packet
-from ..handlers.binary_handler import BinaryHandler
+from ...data_struct.packet import Packet
+from ...handlers.binary_handler import BinaryHandler
 
 
-class WebSocketServerManager:
+class WebSocketListenerManager:
     def __init__(self, uuid):
         self.uuid = uuid
         self.connection = next(
