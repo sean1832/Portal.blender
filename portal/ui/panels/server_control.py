@@ -10,14 +10,17 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False  # no animation
         scene = context.scene
 
         # List of connections
         for index, connection in enumerate(scene.portal_connections):
             box = layout.box()
+            box.use_property_split = False  # Compact view for the box
 
             # Main row with name, start/stop button, and remove button
-            row = box.row()
+            row = box.row(align=True)  # Align row to reduce padding
             row.prop(
                 connection,
                 "show_details",
@@ -30,62 +33,50 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 "portal.toggle_server",
                 text="Start" if not connection.running else "Stop",
                 icon="PLAY" if not connection.running else "PAUSE",
-                depress=True if connection.running else False,  # Highlight button if running
+                depress=connection.running,  # Highlight button if running
             ).uuid = connection.uuid
             row.operator("portal.remove_connection", text="", icon="X").uuid = connection.uuid
 
             if connection.show_details:
-                # split layout into left and right for detailed settings
-                split = box.split(factor=0.35)
-                col_left = split.column()
-                col_right = split.column()
+                # Compact view for connection settings
+                sub_box = box.column(align=True)  # Aligning columns for compactness
+                sub_box.use_property_split = True
 
+                sub_box.prop(connection, "connection_type", text="Connection")
+                
                 # Connection settings based on type
-                col_left.label(text="Connection")
-                col_right.prop(connection, "connection_type", text="")
                 if connection.connection_type == "NAMED_PIPE":
-                    col_left.label(text="Pipe Name")
-                    col_right.prop(connection, "name", text="")
+                    sub_box.prop(connection, "name", text="Pipe Name")
                 elif connection.connection_type == "MMAP":
-                    col_left.label(text="MMAP Name")
-                    col_right.prop(connection, "name", text="")
-                    col_left.label(text="Buffer Size (KB)")
-                    col_right.prop(connection, "buffer_size", text="")
+                    sub_box.prop(connection, "name", text="MMAP Name")
+                    sub_box.prop(connection, "buffer_size", text="Buffer Size (KB)")
                 elif connection.connection_type == "WEBSOCKETS":
-                    col_left.label(text="Port")
-                    col_right.prop(connection, "port", text="")
-                    col_left.label(text="Remote")
-                    col_right.prop(connection, "is_external", text="")
+                    row = sub_box.row(align=True)
+                    row.prop(connection, "port", text="Port")
+                    row.prop(connection, "is_external", text="Remote")
                 elif connection.connection_type == "UDP":
-                    col_left.label(text="Port")
-                    col_right.prop(connection, "port", text="")
-                    col_left.label(text="Remote")
-                    col_right.prop(connection, "is_external", text="")
+                    row = sub_box.row(align=True)
+                    row.prop(connection, "port", text="Port")
+                    row.prop(connection, "is_external", text="Remote")
 
-                col_left.label(text="Data Type")
-                col_right.prop(connection, "data_type", text="")
+                sub_box.prop(connection, "data_type", text="Data Type")
 
                 if connection.data_type == "Custom":
-                    col_left.label(text="Handler")
-                    # Create a row with a split layout to have prop_search and button side by side
-                    row = col_right.row(align=True)
-                    split = row.split(factor=0.85)  # Adjust the factor to control the width ratio
-
-                    split.prop_search(connection, "custom_handler", bpy.data, "texts", text="")
-
-                    # Load file button on the right
-                    split.operator(
+                    # Handler with prop_search and file browser icon in a compact row
+                    row = sub_box.row(align=True)
+                    row.prop_search(connection, "custom_handler", bpy.data, "texts", text="Handler")
+                    row.operator(
                         "portal.load_file_to_text_block",
                         text="",
                         icon="FILEBROWSER",
                     ).uuid = connection.uuid
 
                     if connection.custom_handler:
-                        col_right.operator(
+                        sub_box.operator(
                             "portal.open_text_editor", text="Open in Text Editor"
                         ).text_name = connection.custom_handler
 
-                box.prop(connection, "event_timer")
+                sub_box.prop(connection, "event_timer")
 
         layout.operator("portal.add_connection", text="Add New Connection", icon="ADD")
 
