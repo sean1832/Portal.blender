@@ -4,7 +4,7 @@ import traceback
 import bpy
 
 from ...handlers.string_handler import StringHandler
-from ..globals import MODAL_OPERATORS, RECV_MANAGER
+from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
 
 
 # Modal operator for server event handling
@@ -29,8 +29,7 @@ class ModalOperator(bpy.types.Operator):
             self.cancel(context)
             return {"CANCELLED"}
 
-        server_manager = RECV_MANAGER.get(connection.connection_type, self.uuid)
-
+        server_manager = CONNECTION_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
         if server_manager and server_manager.is_shutdown():
             self.cancel(context)
             return {"CANCELLED"}
@@ -47,26 +46,41 @@ class ModalOperator(bpy.types.Operator):
                     connection,
                     server_traceback,
                 )
-            while not server_manager.data_queue.empty():
-                try:
-                    data = server_manager.data_queue.get_nowait()
-                    StringHandler.handle_string(
-                        data,
-                        connection.data_type,
-                        self.uuid,
-                        connection.name,
-                        connection.custom_handler,
-                    )
-                except queue.Empty:
-                    break
-                except Exception as e:
-                    return self.report_error(
-                        context,
-                        f"Error handling string: {e}",
-                        server_manager,
-                        connection,
-                        traceback=traceback.format_exc(),
-                    )
+            if connection.direction == "SEND":
+                # Non-blocking sending logic triggered by TIMER event
+                message_to_send = connection.send_data  # Retrieve updated data from connection
+                if message_to_send:
+                    try:
+                        server_manager.data_queue.put(message_to_send)
+                    except Exception as e:
+                        return self.report_error(
+                            context,
+                            f"Error sending data: {e}",
+                            server_manager,
+                            connection,
+                            traceback=traceback.format_exc(),
+                        )
+            else:
+                while not server_manager.data_queue.empty():
+                    try:
+                        data = server_manager.data_queue.get_nowait()
+                        StringHandler.handle_string(
+                            data,
+                            connection.data_type,
+                            self.uuid,
+                            connection.name,
+                            connection.custom_handler,
+                        )
+                    except queue.Empty:
+                        break
+                    except Exception as e:
+                        return self.report_error(
+                            context,
+                            f"Error handling string: {e}",
+                            server_manager,
+                            connection,
+                            traceback=traceback.format_exc(),
+                        )
         return {"PASS_THROUGH"}
 
     def execute(self, context):
@@ -92,7 +106,6 @@ class ModalOperator(bpy.types.Operator):
         if self.uuid in MODAL_OPERATORS:
             del MODAL_OPERATORS[self.uuid]
 
-        #return {"CANCELLED"}
         return None
 
     def report_error(self, context, message, server_manager, connection, traceback=None):
@@ -101,7 +114,7 @@ class ModalOperator(bpy.types.Operator):
         if server_manager.is_running():
             server_manager.stop_server()
         connection.running = False
-        RECV_MANAGER.remove(self.uuid)
+        CONNECTION_MANAGER.remove(self.uuid)
         self.cancel(context)
         return {"CANCELLED"}
 
