@@ -2,7 +2,7 @@ import uuid
 
 import bpy
 
-from ..globals import MODAL_OPERATORS, RECV_MANAGER
+from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
 from ..utils.helper import is_connection_duplicated
 
 
@@ -47,14 +47,14 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
 
         if connection:
             index = context.scene.portal_connections.find(connection.name)
-            server_manager = RECV_MANAGER.get(connection.connection_type, self.uuid)
+            server_manager = CONNECTION_MANAGER.get(connection.connection_type, self.uuid)
 
             # Stop the server if it's running
             if connection.running:
                 if server_manager and server_manager.is_running():
                     server_manager.stop_server()
                     connection.running = False
-                    RECV_MANAGER.remove(self.uuid)
+                    CONNECTION_MANAGER.remove(self.uuid)
 
                 # Cancel the modal operator if it is running
                 if uuid in MODAL_OPERATORS:
@@ -88,14 +88,14 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
             self.report({"ERROR"}, f"Connection name '{connection.name}' already exists!")
             return {"CANCELLED"}
 
-        server_manager = RECV_MANAGER.get(connection.connection_type, self.uuid)
+        server_manager = CONNECTION_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
 
         if connection.running or (server_manager and server_manager.is_running()):
             # Stop the server if it's running
             if server_manager and server_manager.is_running():
                 server_manager.stop_server()
                 connection.running = False
-                RECV_MANAGER.remove(self.uuid)  # Remove the manager from SERVER_MANAGERS
+                CONNECTION_MANAGER.remove(self.uuid)  # Remove the manager from SERVER_MANAGERS
         else:
             # Start the server if it's not running
             if server_manager and not server_manager.is_running():
