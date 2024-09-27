@@ -133,7 +133,7 @@ class PipeServerManager:
         self.shutdown_event.clear()
         self._server_thread = threading.Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
-        print(f"Pipe server started for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(f"Pipe listener started for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def stop_server(self):
         self.shutdown_event.set()
@@ -147,7 +147,7 @@ class PipeServerManager:
         if self._server_thread:
             self._server_thread.join()
         self.close_handles()
-        print(f"Pipe server stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(f"Pipe listener stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def is_running(self):
         if not PYWIN32_AVAILABLE:
