@@ -1,4 +1,5 @@
 import bpy
+from bpy.types import UILayout
 
 
 # Main panel to show connections
@@ -75,28 +76,41 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                 if connection.direction == "RECV":
                     sub_box.prop(connection, "data_type", text="Data Type")
                     if connection.data_type == "Custom":
-                        # Handler with prop_search and file browser icon in a compact row
-                        row = sub_box.row(align=True)
-                        row.prop_search(
-                            connection, "custom_handler", bpy.data, "texts", text="Handler"
-                        )
-                        row.operator(
-                            "portal.load_file_to_text_block",
-                            text="",
-                            icon="FILEBROWSER",
-                        ).uuid = connection.uuid
+                        self._draw_custom_handler(sub_box, connection)
 
-                        if connection.custom_handler:
-                            sub_box.operator(
-                                "portal.open_text_editor", text="Open in Text Editor"
-                            ).text_name = connection.custom_handler
+                    sub_box.separator()
+                    sub_box.prop(connection, "event_timer")
                 else:
-                    sub_box.prop(connection, "send_data", text="Send Data")
+                    sub_box.separator()
+                    sub_box.prop(connection, "event_types", text="Trigger Event")
+                    if connection.event_types == "CUSTOM":
+                        self._draw_custom_handler(sub_box, connection)
+                    elif connection.event_types == "TIMER":
+                        sub_box.prop(connection, "event_timer", text="Interval (sec)")
 
-                sub_box.separator()
-                sub_box.prop(connection, "event_timer")
+                    sub_box.prop(connection, "percision", text="Percision")
+
+                    sub_box.separator()
+                    sub_box.operator(
+                        "portal.dict_item_editor", text="Data Editor", icon="MODIFIER_DATA"
+                    ).uuid = connection.uuid
 
         layout.operator("portal.add_connection", text="Add New Connection", icon="ADD")
+
+    def _draw_custom_handler(self, box: UILayout, connection):
+        # Handler with prop_search and file browser icon in a compact row
+        row = box.row(align=True)
+        row.prop_search(connection, "custom_handler", bpy.data, "texts", text="Handler")
+        row.operator(
+            "portal.load_file_to_text_block",
+            text="",
+            icon="FILEBROWSER",
+        ).uuid = connection.uuid
+
+        if connection.custom_handler:
+            box.operator(
+                "portal.open_text_editor", text="Open in Text Editor"
+            ).text_name = connection.custom_handler
 
 
 def register():

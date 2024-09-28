@@ -3,6 +3,8 @@ import uuid
 
 import bpy
 
+from .dictionary_item_properties import DictionaryItem
+
 
 # Custom property group to hold connection properties
 # See doc: https://developer.blender.org/docs/release_notes/2.80/python_api/addons/#class-property-registration
@@ -47,8 +49,21 @@ class PortalConnection(bpy.types.PropertyGroup):
         ],
         default="RECV",
     )
-
     send_data: bpy.props.StringProperty(name="Send Data", default="")
+    event_types: bpy.props.EnumProperty(
+        name="Trigger Event",
+        description="Choose the trigger type for sending data",
+        items=[
+            ("SCENE_UPDATE", "Scene Update", "Trigger on any scene update"),
+            ("RENDER_COMPLETE", "Render Complete", "Trigger after rendering is complete"),
+            ("FRAME_CHANGE", "Frame Change", "Trigger after frame change"),
+            ("TIMER", "Timer", "Trigger on timer event (computational intensive!)"),
+            ("CUSTOM", "Custom", "Trigger on custom event"),
+        ],
+    )
+    percision: bpy.props.FloatProperty(name="Update Percision", description="minimum numerical change to trigger an update", default=0.01)
+    dict_items: bpy.props.CollectionProperty(type=DictionaryItem)
+    dict_items_index: bpy.props.IntProperty(default=0)
 
 
 def register():
