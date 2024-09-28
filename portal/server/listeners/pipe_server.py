@@ -4,8 +4,8 @@ import traceback
 
 import bpy  # type: ignore
 
-from ..data_struct.packet import Packet, PacketHeader
-from ..handlers.binary_handler import BinaryHandler
+from ...data_struct.packet import Packet, PacketHeader
+from ...handlers.binary_handler import BinaryHandler
 
 # Attempt to import the pywin32 modules safely
 try:
@@ -19,7 +19,7 @@ except ImportError:
     PYWIN32_AVAILABLE = False
 
 
-class PipeServerManager:
+class PipeListenerManager:
     def __init__(self, uuid):
         self.uuid = uuid
         self.connection = next(
@@ -35,7 +35,7 @@ class PipeServerManager:
         self.traceback = None
         self.error_lock = threading.Lock()
 
-    def handle_raw_bytes(self, pipe):
+    def _handle_raw_bytes(self, pipe):
         if not PYWIN32_AVAILABLE:
             return
         try:
@@ -62,7 +62,7 @@ class PipeServerManager:
                 self.traceback = traceback.format_exc()
                 self.error = e
 
-    def run_server(self):
+    def _run_server(self):
         if not PYWIN32_AVAILABLE:
             return
         while not self.shutdown_event.is_set():
@@ -88,7 +88,7 @@ class PipeServerManager:
                 while not self.shutdown_event.is_set():
                     rc = win32event.WaitForSingleObject(self.pipe_event, 100)
                     if rc == win32event.WAIT_OBJECT_0:
-                        self.handle_raw_bytes(self.pipe_handle)
+                        self._handle_raw_bytes(self.pipe_handle)
                         win32pipe.DisconnectNamedPipe(self.pipe_handle)
                         win32pipe.ConnectNamedPipe(self.pipe_handle, overlapped)
 
@@ -131,9 +131,9 @@ class PipeServerManager:
 
     def start_server(self):
         self.shutdown_event.clear()
-        self._server_thread = threading.Thread(target=self.run_server, daemon=True)
+        self._server_thread = threading.Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
-        print(f"Pipe server started for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(f"Pipe listener started for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def stop_server(self):
         self.shutdown_event.set()
@@ -147,7 +147,7 @@ class PipeServerManager:
         if self._server_thread:
             self._server_thread.join()
         self.close_handles()
-        print(f"Pipe server stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(f"Pipe listener stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
 
     def is_running(self):
         if not PYWIN32_AVAILABLE:

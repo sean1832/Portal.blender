@@ -3,6 +3,8 @@ import uuid
 
 import bpy
 
+from .dictionary_item_properties import DictionaryItem
+
 
 # Custom property group to hold connection properties
 # See doc: https://developer.blender.org/docs/release_notes/2.80/python_api/addons/#class-property-registration
@@ -20,6 +22,7 @@ class PortalConnection(bpy.types.PropertyGroup):
         default="NAMED_PIPE",
     )
     name: bpy.props.StringProperty(name="Connection Name", default="testpipe")
+    host: bpy.props.StringProperty(name="Host", default="127.0.0.1")
     port: bpy.props.IntProperty(name="Port", default=6000)
     is_external: bpy.props.BoolProperty(name="Listen Remote", default=False)
     buffer_size: bpy.props.IntProperty(name="Buffer Size (KB)", default=1024)
@@ -37,10 +40,42 @@ class PortalConnection(bpy.types.PropertyGroup):
     show_details: bpy.props.BoolProperty(name="Show Details", default=True)
     custom_handler: bpy.props.StringProperty(name="Custom Handler", default="")
 
+    direction: bpy.props.EnumProperty(
+        name="Send/Receive",
+        description="Choose the direction of data flow",
+        items=[
+            ("RECV", "recv", "Receive data from the server", "IMPORT", 0),  # Added icon 'IMPORT'
+            ("SEND", "send", "Send data to the server", "EXPORT", 1),  # Added icon 'EXPORT'
+        ],
+        default="RECV",
+    )
+    send_data: bpy.props.StringProperty(name="Send Data", default="")
+    event_types: bpy.props.EnumProperty(
+        name="Trigger Event",
+        description="Choose the trigger type for sending data",
+        items=[
+            ("SCENE_UPDATE", "Scene Update", "Trigger on any scene update"),
+            ("RENDER_COMPLETE", "Render Complete", "Trigger after rendering is complete"),
+            ("FRAME_CHANGE", "Frame Change", "Trigger after frame change"),
+            ("TIMER", "Timer", "Trigger on timer event (computational intensive!)"),
+            # ("CUSTOM", "Custom", "Trigger on custom event"),
+            # TODO: Implement custom event
+        ],
+    )
+    percision: bpy.props.FloatProperty(
+        name="Update Percision",
+        description="minimum numerical change to trigger an update",
+        default=0.01,
+    )
+    dict_items: bpy.props.CollectionProperty(type=DictionaryItem)
+    dict_items_index: bpy.props.IntProperty(default=0)
+
+
 def register():
     bpy.utils.register_class(PortalConnection)
     bpy.types.Scene.portal_connections = bpy.props.CollectionProperty(type=PortalConnection)
     bpy.types.Scene.portal_active_connection_uuid = bpy.props.StringProperty(default="")
+
 
 def unregister():
     bpy.utils.unregister_class(PortalConnection)
