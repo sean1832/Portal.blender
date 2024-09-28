@@ -4,6 +4,9 @@ from .color import ColorFactory
 from .material import Material
 from .p_types import PGeoType
 
+import numpy as np
+from mathutils import Vector
+
 
 class Mesh:
     def __init__(self):
@@ -230,20 +233,27 @@ class Mesh:
         # Get the world transformation matrix
         world_matrix = obj.matrix_world
 
-        # Apply the transformation matrix to each vertex to get the world coordinates
-        mesh.vertices = [
-            tuple(world_matrix @ v.co) for v in obj.data.vertices
-        ]  # Convert Vector to world coordinates tuple
+        # Use bulk access to retrieve vertex data and apply transformation
+        vertex_data = np.empty(len(obj.data.vertices) * 3)
+        obj.data.vertices.foreach_get('co', vertex_data)
+        vertex_data = vertex_data.reshape(-1, 3)
 
-        # Faces remain the same as they are relative indices of the vertices
+        # Transform vertices by matrix_world
+        mesh.vertices = [(world_matrix @ Vector(v)).to_tuple() for v in vertex_data]
+
+        # Bulk access for faces
         mesh.faces = [tuple(f.vertices) for f in obj.data.polygons]
 
         # Handle vertex colors
         if obj.data.vertex_colors:
-            mesh.vertex_colors = [tuple(col.color) for col in obj.data.vertex_colors.active.data]
+            color_data = np.empty(len(obj.data.vertex_colors.active.data) * 4)
+            obj.data.vertex_colors.active.data.foreach_get('color', color_data)
+            mesh.vertex_colors = list(color_data.reshape(-1, 4))
 
         # Handle UVs
         if obj.data.uv_layers:
-            mesh.uvs = [tuple(uv.uv) for uv in obj.data.uv_layers.active.data]
+            uv_data = np.empty(len(obj.data.uv_layers.active.data) * 2)
+            obj.data.uv_layers.active.data.foreach_get('uv', uv_data)
+            mesh.uvs = list(uv_data.reshape(-1, 2))
 
         return mesh
