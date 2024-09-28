@@ -1,5 +1,7 @@
 import struct
 
+from ..utils.crypto import Crc16
+
 
 class PacketHeader:
     def __init__(self, is_encrypted, is_compressed, size, checksum):
@@ -26,7 +28,6 @@ class PacketHeader:
 
     @staticmethod
     def get_expected_size():
-        # see
         return 8  # 1 + 1 + 2 + 4
 
 
@@ -46,8 +47,12 @@ class Packet:
         if header is not None:
             self.header = header
         else:
-            computed_size = size if size is not None else len(data)
-            self.header = PacketHeader(is_encrypted, is_compressed, computed_size, checksum)
+            self.header = PacketHeader(
+                is_encrypted if is_encrypted is not None else False,
+                is_compressed if is_compressed is not None else self._is_gzip,
+                size if size is not None else len(data),
+                checksum if checksum is not None else self._compute_checksum(),
+            )
 
     def serialize(self) -> bytes:
         header_bytes = bytearray()
@@ -57,6 +62,14 @@ class Packet:
         header_bytes.extend(struct.pack("H", self.header.checksum))  # checksum
         header_bytes.extend(struct.pack("i", self.header.size))  # size
         return bytes(header_bytes) + self.data  # combine header and data
+
+    def _is_gzip(self) -> bool:
+        if self.data[:2] == b"\x1f\x8b":
+            return True
+        return False
+
+    def _compute_checksum(self) -> int:
+        return Crc16().compute_checksum(self.data)
 
     @staticmethod
     def validate_magic_number(data):
