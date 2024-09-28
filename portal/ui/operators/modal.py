@@ -69,7 +69,7 @@ class ModalOperator(bpy.types.Operator):
 
     def _handle_send_event(self, context, connection, server_manager):
         try:
-            message_to_send = construct_packet_dict(connection.dict_items, connection.percision)
+            message_to_send = construct_packet_dict(connection.dict_items, connection.precision)
             if message_to_send:
                 server_manager.data_queue.put(message_to_send)
         except Exception as e:

@@ -88,7 +88,7 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                     elif connection.event_types == "TIMER":
                         sub_box.prop(connection, "event_timer", text="Interval (sec)")
 
-                    sub_box.prop(connection, "percision", text="Percision")
+                    sub_box.prop(connection, "precision", text="Precision")
 
                     sub_box.separator()
                     sub_box.operator(

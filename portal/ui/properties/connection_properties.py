@@ -62,8 +62,8 @@ class PortalConnection(bpy.types.PropertyGroup):
             # TODO: Implement custom event
         ],
     )
-    percision: bpy.props.FloatProperty(
-        name="Update Percision",
+    precision: bpy.props.FloatProperty(
+        name="Update Precision",
         description="minimum numerical change to trigger an update",
         default=0.01,
     )
