@@ -3,6 +3,7 @@ import traceback
 
 import bpy
 
+from ...handlers.custom_handler import CustomHandler
 from ...handlers.string_handler import StringHandler
 from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
 from ..utils.helper import construct_packet_dict
@@ -20,14 +21,21 @@ class ModalOperator(bpy.types.Operator):
         self.render_complete_handler = None
         self.frame_change_handler = None
         self.scene_update_handler = None
+        self.custom_event_handler = None
 
     def modal(self, context, event):
         connection = self._get_connection(context)
-        if not connection or self._should_cancel(connection):
+        if not connection:
+            self.report({"ERROR"}, "Connection not found.")
             return {"CANCELLED"}
 
         server_manager = self._get_server_manager(connection)
         if not server_manager:
+            self.report({"ERROR"}, "Server manager not found.")
+            return {"CANCELLED"}
+
+        if self._is_server_shutdown(server_manager):
+            self.report({"ERROR"}, "Server has been shut down.")
             return {"CANCELLED"}
 
         # Handle server errors and tracebacks
@@ -45,6 +53,7 @@ class ModalOperator(bpy.types.Operator):
     def execute(self, context):
         connection = self._get_connection(context)
         if not connection:
+            self.report({"ERROR"}, "Connection not found.")
             return {"CANCELLED"}
 
         # Set up the timer and register modal handler
@@ -130,15 +139,10 @@ class ModalOperator(bpy.types.Operator):
         self.cancel(context)
         return {"CANCELLED"}
 
-    def _send_data_on_event(self, scene, connection_uuid):
-        connection = self._get_connection_by_uuid(connection_uuid)
-        if not connection or not connection.running:
-            return
-
+    def _send_data_on_event(self, scene, connection):
         server_manager = self._get_server_manager(connection)
         if not server_manager:
             return
-
         self._handle_send_event(bpy.context, connection, server_manager)
 
     def _get_connection(self, context):
@@ -154,9 +158,8 @@ class ModalOperator(bpy.types.Operator):
     def _get_server_manager(self, connection):
         return CONNECTION_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
 
-    def _should_cancel(self, connection):
-        server_manager = self._get_server_manager(connection)
-        if server_manager and server_manager.is_shutdown():
+    def _is_server_shutdown(self, server_manager):
+        if server_manager.is_shutdown():
             self.cancel(bpy.context)
             return True
         return False
@@ -164,19 +167,33 @@ class ModalOperator(bpy.types.Operator):
     def _register_event_handlers(self, connection):
         if "RENDER_COMPLETE" in connection.event_types:
             # https://docs.blender.org/api/current/bpy.app.handlers.html#bpy.app.handlers.render_complete
-            self.render_complete_handler = lambda scene: self._send_data_on_event(scene, self.uuid)
+            self.render_complete_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.render_complete.append(self.render_complete_handler)
 
         if "FRAME_CHANGE" in connection.event_types:
             # https://docs.blender.org/api/current/bpy.app.handlers.html#bpy.app.handlers.frame_change_post
-            self.frame_change_handler = lambda scene: self._send_data_on_event(scene, self.uuid)
+            self.frame_change_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.frame_change_post.append(self.frame_change_handler)
 
         if "SCENE_UPDATE" in connection.event_types:
             # on any scene event
             # https://docs.blender.org/api/current/bpy.app.handlers.html#bpy.app.handlers.depsgraph_update_post
-            self.scene_update_handler = lambda scene: self._send_data_on_event(scene, self.uuid)
+            self.scene_update_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.depsgraph_update_post.append(self.scene_update_handler)
+
+        if "CUSTOM" in connection.event_types:
+            # Custom event
+            try:
+                handler = CustomHandler.load(
+                    connection.custom_handler,
+                    "MySendEventHandler",
+                    "https://github.com/sean1832/portal.blender/blob/main/templates/sender_handler.py",
+                )
+                self.custom_event_handler = handler(self._get_server_manager(connection))
+                self.custom_event_handler.register()
+            except Exception as e:
+                self.report({"ERROR"}, f"Error loading custom event handler: {e}")
+                return {"CANCELLED"}
 
     def _unregister_event_handlers(self):
         if self.render_complete_handler:
@@ -190,6 +207,10 @@ class ModalOperator(bpy.types.Operator):
         if self.scene_update_handler:
             bpy.app.handlers.depsgraph_update_post.remove(self.scene_update_handler)
             self.scene_update_handler = None
+
+        if self.custom_event_handler:
+            self.custom_event_handler.unregister()
+            self.custom_event_handler = None
 
 
 def register():
