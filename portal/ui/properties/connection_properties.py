@@ -58,8 +58,7 @@ class PortalConnection(bpy.types.PropertyGroup):
             ("RENDER_COMPLETE", "Render Complete", "Trigger after rendering is complete"),
             ("FRAME_CHANGE", "Frame Change", "Trigger after frame change"),
             ("TIMER", "Timer", "Trigger on timer event (computational intensive!)"),
-            # ("CUSTOM", "Custom", "Trigger on custom event"),
-            # TODO: Implement custom event
+            ("CUSTOM", "Custom", "Trigger on custom event"),
         ],
     )
     precision: bpy.props.FloatProperty(

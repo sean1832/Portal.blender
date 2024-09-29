@@ -3,7 +3,7 @@ import uuid
 import bpy
 
 from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
-from ..utils.helper import is_connection_duplicated
+from ..ui_utils.helper import is_connection_duplicated
 
 
 # Operator to add new connection
