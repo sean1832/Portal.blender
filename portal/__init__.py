@@ -11,7 +11,7 @@ import portal.ui as ui
 bl_info = {
     "name": "Portal",
     "author": "Zeke Zhang",
-    "version": (0, 1, 2),
+    "version": (0, 2, 0),
     "blender": (4, 2, 0),
     "category": "System",
     "location": "View3D > Sidebar > Portal",
