@@ -4,7 +4,7 @@ from typing import Tuple
 from ..data_struct.camera import Camera
 from ..data_struct.material import Material
 from ..data_struct.mesh import Mesh
-from ..utils.handler_loader import load_handler_from_text_block
+from .custom_handler import CustomHandler
 
 
 class StringHandler:
@@ -26,19 +26,12 @@ class StringHandler:
 
     @staticmethod
     def _handle_custom_data(payload, channel_name, uuid, handler_src):
-        if not handler_src:
-            raise ValueError("Handler source is empty.")
-        module = load_handler_from_text_block(handler_src)
-        if not module:
-            raise ImportError("Module not found.")
-        CustomHandler = module.get("CustomHandler", None)
-        if not CustomHandler:
-            raise ImportError(
-                "CustomHandler class not found. Please refer to template (https://github.com/sean1832/portal.blender/blob/main/templates/custom_data_handler.py)"
-            )
-
-        handler = CustomHandler()
-        handler.update(payload, channel_name, uuid)
+        custom_handler = CustomHandler.load(
+            handler_src,
+            "MyRecvHandler",
+            "https://github.com/sean1832/portal.blender/blob/main/templates/recv_handler.py",
+        )
+        handler = custom_handler(payload, channel_name, uuid)
         handler.handle()
 
     @staticmethod
