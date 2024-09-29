@@ -108,8 +108,8 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
         ).uuid = connection.uuid
 
         if connection.custom_handler:
-            box.operator(
-                "portal.open_text_editor", text="Open in Text Editor"
+            row.operator(
+                "portal.open_text_editor", text="", icon="ZOOM_ALL"
             ).text_name = connection.custom_handler
 
 
