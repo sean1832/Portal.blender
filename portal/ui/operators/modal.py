@@ -94,6 +94,8 @@ class ModalOperator(bpy.types.Operator):
         while not server_manager.data_queue.empty():
             try:
                 data = server_manager.data_queue.get_nowait()
+                if not data or data == "{}" or data == "[]":  # Empty data
+                    break
                 StringHandler.handle_string(
                     data,
                     connection.data_type,
