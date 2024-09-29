@@ -43,7 +43,7 @@ def construct_packet_dict(data_items, update_precision) -> str:
             else:
                 raise ValueError(f"Unsupported object type: {scene_obj.type}")
         elif item.value_type == "PROPERTY_PATH":
-            meta[item.key] = item.value_property_path
+            meta[item.key] = get_property_from_path(item.value_property_path)
         elif item.value_type == "UUID":
             meta[item.key] = item.value_uuid
 
@@ -51,3 +51,9 @@ def construct_packet_dict(data_items, update_precision) -> str:
         payload.set_meta(meta)
         return payload.to_json_str()
     return json.dumps(meta)
+
+
+def get_property_from_path(path: str):
+    # Use eval to resolve the path
+    value = eval(path)
+    return value

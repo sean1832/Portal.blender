@@ -12,7 +12,7 @@ class DictionaryItem(bpy.types.PropertyGroup):
             ("NUMBER", "Number", "Numerical value"),
             ("BOOL", "Boolean", "Boolean value"),
             ("SCENE_OBJECT", "Scene Object", "Scene object value"),
-            ("PROPERTY_PATH", "Property Path", "Property path value"),
+            ("PROPERTY_PATH", "Property Full Path", "Property full path. (copy from the context menu)"),
             ("TIMESTAMP", "Timestamp", "Timestamp value"),
             ("UUID", "UUID", "UUID value"),
         ],
