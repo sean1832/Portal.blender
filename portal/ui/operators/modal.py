@@ -6,7 +6,7 @@ import bpy
 from ...handlers.custom_handler import CustomHandler
 from ...handlers.string_handler import StringHandler
 from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
-from ..utils.helper import construct_packet_dict
+from ..ui_utils.helper import construct_packet_dict
 
 
 class ModalOperator(bpy.types.Operator):
