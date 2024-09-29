@@ -1,8 +1,5 @@
-import ast
 import json
 import time
-
-import bpy
 
 from ...data_struct.mesh import Mesh
 from ...data_struct.payload import Payload
