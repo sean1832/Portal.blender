@@ -18,45 +18,18 @@ class Mesh:
         self.mesh_data = None
         self.object_name = None
 
-    def to_dict(self, meta: dict | None = None, is_float=False, precision: float | None = None) -> dict:
+    def to_dict(self, meta: dict | None = None) -> dict:
         """
         Convert the mesh data to a dictionary for serialization.
 
         Args:
             meta (dict | None): Metadata dictionary.
-            is_float (bool): Whether to convert values to floats.
-            precision (float | None): Precision value to determine rounding.
 
         Returns:
             dict: Serialized mesh data.
         """
-        def apply_precision(value, precision):
-            """Helper function to round a value according to the specified precision."""
-            if precision:
-                return round(value / precision) * precision
-            return value
-
-        if is_float and precision is not None:
-            # Apply precision rounding to vertices and uvs
-            vertices = [
-                {"X": apply_precision(v[0], precision),
-                 "Y": apply_precision(v[1], precision),
-                 "Z": apply_precision(v[2], precision)}
-                for v in self.vertices
-            ]
-            uvs = [
-                {"X": apply_precision(uv[0], precision),
-                 "Y": apply_precision(uv[1], precision)}
-                for uv in self.uvs
-            ]
-        elif is_float:
-            # Default behavior without precision
-            vertices = [{"X": float(v[0]), "Y": float(v[1]), "Z": float(v[2])} for v in self.vertices]
-            uvs = [{"X": float(uv[0]), "Y": float(uv[1])} for uv in self.uvs]
-        else:
-            # Non-float serialization
-            vertices = [{"X": v[0], "Y": v[1], "Z": v[2]} for v in self.vertices]
-            uvs = [{"X": uv[0], "Y": uv[1]} for uv in self.uvs]
+        vertices = [{"X": v[0], "Y": v[1], "Z": v[2]} for v in self.vertices]
+        uvs = [{"X": uv[0], "Y": uv[1]} for uv in self.uvs]
 
         mesh_dict = {
             "Type": PGeoType.MESH.value,

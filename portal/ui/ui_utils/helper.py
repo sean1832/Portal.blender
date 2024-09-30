@@ -13,7 +13,7 @@ def is_connection_duplicated(connections, name_to_check, uuid_to_ignore=None):
     return False
 
 
-def construct_packet_dict(data_items, update_precision) -> str:
+def construct_packet_dict(data_items) -> str:
     """Helper function to construct a dictionary from a collection of dictionary items"""
     payload = Payload()
     meta = {}
@@ -34,7 +34,7 @@ def construct_packet_dict(data_items, update_precision) -> str:
             scene_obj = item.value_scene_object
             if scene_obj.type == "MESH":
                 payload.add_items(
-                    Mesh.from_obj(scene_obj).to_dict(is_float=True, precision=update_precision)
+                    Mesh.from_obj(scene_obj).to_dict()
                 )
             elif scene_obj.type == "CAMERA":
                 raise NotImplementedError("Camera object type is not supported yet")

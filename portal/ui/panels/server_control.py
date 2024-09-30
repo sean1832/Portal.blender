@@ -89,7 +89,6 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                         sub_box.prop(connection, "event_timer", text="Interval (sec)")
                     
                     if not connection.event_types == "CUSTOM":
-                        sub_box.prop(connection, "precision", text="Precision")
                         sub_box.separator()
                         sub_box.operator(
                             "portal.dict_item_editor", text="Data Editor", icon="MODIFIER_DATA"
