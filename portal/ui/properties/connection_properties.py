@@ -61,11 +61,6 @@ class PortalConnection(bpy.types.PropertyGroup):
             ("CUSTOM", "Custom", "Trigger on custom event"),
         ],
     )
-    precision: bpy.props.FloatProperty(
-        name="Update Precision",
-        description="minimum numerical change to trigger an update",
-        default=0.01,
-    )
     dict_items: bpy.props.CollectionProperty(type=DictionaryItem)
     dict_items_index: bpy.props.IntProperty(default=0)
 
