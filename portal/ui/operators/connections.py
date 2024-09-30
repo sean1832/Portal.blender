@@ -96,6 +96,11 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
                 server_manager.stop_server()
                 connection.running = False
                 CONNECTION_MANAGER.remove(self.uuid)  # Remove the manager from SERVER_MANAGERS
+                # Cancel the modal operator if it is running and unregister the event handlers
+                if self.uuid in MODAL_OPERATORS:
+                    modal_operator = MODAL_OPERATORS[self.uuid]
+                    modal_operator.cancel(context)  # This will trigger _unregister_event_handlers
+                    modal_operator._unregister_event_handlers()  # Ensuring handlers are unregistered
         else:
             # Start the server if it's not running
             if server_manager and not server_manager.is_running():
