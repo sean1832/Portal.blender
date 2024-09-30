@@ -53,17 +53,20 @@ class Light:
         existing_light_type = existing_obj.data.type
         if existing_light_type != self.type:
             existing_obj.data.type = self.type
+        existing_obj.location = self.location
         light_data = existing_obj.data
         light_data.color = self.rgb_color
         light_data.energy = self.energy
         if self.type == "SPOT":
             light_data.spot_size = self.spot_size
             light_data.spot_blend = self.spot_blend
+            existing_obj.rotation_euler = self.rotation_euler
+        elif self.type == "POINT":
+            pass
+        elif self.type == "DIRECTIONAL":
+            pass
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
-
-        existing_obj.location = self.location
-        existing_obj.rotation_euler = self.rotation_euler
 
     def _create_new(self, layer_path: Optional[str] = None) -> None:
         if self.type == "SPOT":
@@ -83,12 +86,17 @@ class Light:
         if self.type == "SPOT":
             light_data.spot_size = self.spot_size
             light_data.spot_blend = self.spot_blend
+        elif self.type == "POINT":
+            pass
+        elif self.type == "DIRECTIONAL":
+            pass
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
 
         light_object = bpy.data.objects.new(self.object_name, light_data)
         light_object.location = self.location
-        light_object.rotation_euler = self.rotation_euler
+        if self.type == "SPOT":
+            light_object.rotation_euler = self.rotation_euler
 
         bpy.context.collection.objects.link(light_object)
         self._link_object_to_collection(light_object, layer_path)
@@ -153,9 +161,9 @@ class Light:
             # TODO: implement spot light scale. Currently scale is default (1, 1, 1).
             light._set_spot_data(spot_size, spot_blend, direction_vector)
         elif type.upper() == "POINT":
-            raise NotImplementedError("Point light type is not supported yet")
+            pass
         elif type.upper() == "DIRECTIONAL":
-            raise NotImplementedError("Sun light type is not supported yet")
+            pass
         elif type.upper() == "RECTANGULAR":
             raise NotImplementedError("Area light type is not supported yet")
         else:
