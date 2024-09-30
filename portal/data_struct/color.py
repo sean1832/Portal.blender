@@ -16,6 +16,10 @@ class Color:
         """Return the color as a tuple of (r, g, b, a)."""
         return (self.r, self.g, self.b, self.a)
 
+    def to_rgb_tuple(self) -> Tuple[int, int, int]:
+        """Return the color as an RGB tuple of (r, g, b)."""
+        return (self.r, self.g, self.b)
+
     def to_normalized_tuple(self) -> Tuple[float, float, float, float]:
         """Return the color as a normalized tuple of (r, g, b, a)."""
         return (self.r / 255, self.g / 255, self.b / 255, self.a)
