@@ -1,6 +1,6 @@
 import bpy
 
-from .color import ColorFactory
+from .color import Color
 from .material import Material
 from .p_types import PGeoType
 
@@ -64,7 +64,7 @@ class Mesh:
             "Faces": [list(face) for face in self.faces],
             "UVs": uvs,
             "VertexColors": [
-                ColorFactory.from_normalized_tuple(col).to_hex() for col in self.vertex_colors
+                Color.from_normalized_tuple(col).to_hex('rgb') for col in self.vertex_colors
             ],
         }
         return {"Items": mesh_dict, "Meta": meta if meta else {}}
@@ -216,7 +216,7 @@ class Mesh:
         vertex_colors = None
         if color_hexs and len(color_hexs) == len(vertices):
             vertex_colors = [
-                ColorFactory.from_hex(hex_str).to_normalized_tuple() for hex_str in color_hexs
+                Color.from_hex(hex_str).to_tuple(normalize=True) for hex_str in color_hexs
             ]
 
         mesh = Mesh()
