@@ -23,6 +23,10 @@ class Light:
         self.spot_blend: Optional[float] = None
         self.rotation_euler: Optional[Vector] = None
 
+        # Area light properties
+        self.size: Optional[tuple] = None
+        self.distance: Optional[float] = None
+
     def create_or_replace(self, object_name: str, layer_path: Optional[str] = None) -> None:
         self.object_name = object_name
         existing_light = bpy.data.objects.get(object_name)
@@ -37,8 +41,17 @@ class Light:
         self.name = name
         self.rgb_color = color
         self.energy = energy
-        self.type = type.upper()
         self.location = location
+        if type.upper() not in ["SPOT", "POINT", "DIRECTIONAL", "RECTANGULAR"]:
+            raise ValueError(f"Unsupported light type: {type}")
+        if type.upper() == "SPOT":
+            self.type = "SPOT"
+        elif type.upper() == "POINT":
+            self.type = "POINT"
+        elif type.upper() == "DIRECTIONAL":
+            self.type = "SUN"
+        elif type.upper() == "RECTANGULAR":
+            self.type = "AREA"
 
     def _set_spot_data(self, spot_size: float, spot_blend: float, rotation_vec: Vector) -> None:
         self.spot_size = spot_size
@@ -48,6 +61,11 @@ class Light:
             self.rotation_euler = default_direction.rotation_difference(rotation_vec).to_euler()
         else:
             self.rotation_euler = mathutils.Euler((0, 0, 0))
+
+    def _set_area_data(self, size: tuple, distance: float, rotation_euler: Vector) -> None:
+        self.size = size
+        self.distance = distance
+        self.rotation_euler = rotation_euler
 
     def _replace_light(self, existing_obj: Any) -> None:
         existing_light_type = existing_obj.data.type
@@ -63,22 +81,18 @@ class Light:
             existing_obj.rotation_euler = self.rotation_euler
         elif self.type == "POINT":
             pass
-        elif self.type == "DIRECTIONAL":
+        elif self.type == "SUN":
             pass
+        elif self.type == "AREA":
+            light_data.size = self.size[0]
+            light_data.size_y = self.size[1]
+            light_data.use_custom_distance = True
+            light_data.cutoff_distance = self.distance
+            existing_obj.rotation_euler = self.rotation_euler
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
 
     def _create_new(self, layer_path: Optional[str] = None) -> None:
-        if self.type == "SPOT":
-            type = "SPOT"
-        elif self.type == "POINT":
-            type = "POINT"
-        elif self.type == "DIRECTIONAL":
-            type = "SUN"
-        elif self.type == "RECTANGULAR":
-            type = "AREA"
-        else:
-            raise ValueError(f"Unsupported light type: {self.type}")
         name = self.name if self.name else f"{self.object_name}_{type}"
         light_data = bpy.data.lights.new(name, type)
         light_data.color = self.rgb_color
@@ -88,8 +102,13 @@ class Light:
             light_data.spot_blend = self.spot_blend
         elif self.type == "POINT":
             pass
-        elif self.type == "DIRECTIONAL":
+        elif self.type == "SUN":
             pass
+        elif self.type == "AREA":
+            light_data.size = self.size[0]
+            light_data.size_y = self.size[1]
+
+            light_data.cutoff_distance = self.distance
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
 
@@ -97,8 +116,10 @@ class Light:
         light_object.location = self.location
         if self.type == "SPOT":
             light_object.rotation_euler = self.rotation_euler
+        if self.type == "AREA":
+            light_object.rotation_euler = self.rotation_euler
+            light_object.use_cutoff_distance = True
 
-        bpy.context.collection.objects.link(light_object)
         self._link_object_to_collection(light_object, layer_path)
 
     def _link_object_to_collection(self, obj: Any, layer_path: Optional[str] = None) -> None:
@@ -151,7 +172,9 @@ class Light:
         if type.upper() == "SPOT":
             spot_size: float = data.get("SpotAngleRadians")
             radii: dict = data.get("SpotRadii")
-            spot_blend = 1 - (radii.get("Inner") / radii.get("Outer")) # FIXME: blender's spot_blend is probably not linear.
+            spot_blend = 1 - (
+                radii.get("Inner") / radii.get("Outer")
+            )  # FIXME: blender's spot_blend is probably not linear.
             direction: dict = data.get("Direction")
             if not all([spot_size, spot_blend, direction]):
                 raise ValueError("Missing required spot light data")
@@ -165,7 +188,44 @@ class Light:
         elif type.upper() == "DIRECTIONAL":
             pass
         elif type.upper() == "RECTANGULAR":
-            raise NotImplementedError("Area light type is not supported yet")
+            length_dict: dict = data.get("Length")
+            width_dict: dict = data.get("Width")
+            direction: dict = data.get("Direction")
+            if not all([length_dict, width_dict, direction]):
+                raise ValueError("Missing required area light data")
+            length_vec = mathutils.Vector((length_dict["X"], length_dict["Y"], length_dict["Z"]))
+            length = length_vec.length
+            width_vec = mathutils.Vector((width_dict["X"], width_dict["Y"], width_dict["Z"]))
+            width = width_vec.length
+
+            direction_vec = mathutils.Vector((direction["X"], direction["Y"], direction["Z"]))
+            distance = direction_vec.length
+
+            # Normalize vectors
+            length_vec.normalize()
+            width_vec.normalize()
+            direction_vec.normalize()
+
+            # area light faces along negative Z axis in local space
+            z_axis = -direction_vec
+            x_axis = length_vec
+
+            # ensure x_axis is orthogonal to z_axis
+            x_axis = (x_axis - x_axis.project(z_axis)).normalized()
+            y_axis = z_axis.cross(x_axis).normalized()
+
+            rotation_matrix = mathutils.Matrix((x_axis, y_axis, z_axis)).transposed()
+            rotation_euler = rotation_matrix.to_euler()
+
+            # Calculate the offset vector to center the area light
+            offset_vector = (x_axis * (length / 2)) + (y_axis * (width / 2))
+
+            # Adjust the location
+            original_location = mathutils.Vector((pos["X"], pos["Y"], pos["Z"]))
+            adjusted_location = original_location + offset_vector
+
+            light._set_area_data((length, width), distance, rotation_euler)
+            light.location = adjusted_location
         else:
             raise ValueError(f"Unsupported light type: {type}")
 
