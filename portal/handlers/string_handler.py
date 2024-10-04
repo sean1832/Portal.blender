@@ -2,9 +2,9 @@ import json
 from typing import Tuple
 
 from ..data_struct.camera import Camera
+from ..data_struct.light import Light
 from ..data_struct.material import Material
 from ..data_struct.mesh import Mesh
-from ..data_struct.light import Light
 from .custom_handler import CustomHandler
 
 
@@ -29,11 +29,15 @@ class StringHandler:
     @staticmethod
     def _handle_light_data(payload):
         """Handle light data payload."""
-        light_data = json.loads(payload)
-        if not light_data:
-            raise ValueError("Light data is empty.")
-        light = Light.from_dict(light_data)
-        light.create_or_replace("Light")
+        light_dict = json.loads(payload)
+        if not light_dict:
+            raise ValueError("Light dict is empty.")
+        light_datas = light_dict.get("Lights")
+        if not light_datas:
+            raise ValueError("Light dict does not contain `Lights` key.")
+        for i, light_data in enumerate(light_datas):
+            light = Light.from_dict(light_data)
+            light.create_or_replace(f"Light_{i}")
 
     @staticmethod
     def _handle_custom_data(payload, channel_name, uuid, handler_src):

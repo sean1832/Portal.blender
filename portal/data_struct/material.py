@@ -1,6 +1,7 @@
 import os
 
 import bpy
+from bpy.types import Material as BlenderMaterial
 
 from .color import Color
 
@@ -11,7 +12,7 @@ class Material:
         self.name = None
         self.diffuse_color = None
         self.textures = []
-        self.material = None
+        self.material:BlenderMaterial = None
 
     def set_data(self, diffuse_color, textures=[]):
         """Set the material data."""
@@ -83,7 +84,7 @@ class Material:
         """Set the base color of the material."""
         self.material.diffuse_color = Color.from_hex(
             self.diffuse_color
-        ).to_tuple(type='rgb',normalize=True)
+        ).to_tuple(type='rgba',normalize=True)
 
     def _apply_textures(self):
         """Apply textures to the material."""
