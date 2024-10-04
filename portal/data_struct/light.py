@@ -93,8 +93,8 @@ class Light:
             raise ValueError(f"Unsupported light type: {self.type}")
 
     def _create_new(self, layer_path: Optional[str] = None) -> None:
-        name = self.name if self.name else f"{self.object_name}_{type}"
-        light_data = bpy.data.lights.new(name, type)
+        name = self.name if self.name else f"{self.object_name}_{self.type}"
+        light_data = bpy.data.lights.new(name, self.type)
         light_data.color = self.rgb_color
         light_data.energy = self.energy
         if self.type == "SPOT":
@@ -165,7 +165,7 @@ class Light:
         energy: float = data.get("Intensity")
         pos: dict = data.get("Position")
         if not all([type, energy, pos]):
-            raise ValueError("Missing required light data")
+            raise ValueError(f"Missing required light data. Got: {data}")
         location = (pos["X"], pos["Y"], pos["Z"])
         light._set_light_data(name, color, energy, type, location)
 
