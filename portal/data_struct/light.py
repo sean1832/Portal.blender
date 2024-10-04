@@ -84,6 +84,7 @@ class Light:
         elif self.type == "SUN":
             pass
         elif self.type == "AREA":
+            light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
             light_data.use_custom_distance = True
@@ -93,8 +94,8 @@ class Light:
             raise ValueError(f"Unsupported light type: {self.type}")
 
     def _create_new(self, layer_path: Optional[str] = None) -> None:
-        name = self.name if self.name else f"{self.object_name}_{type}"
-        light_data = bpy.data.lights.new(name, type)
+        name = self.name if self.name else f"{self.object_name}_{self.type}"
+        light_data = bpy.data.lights.new(name, self.type)
         light_data.color = self.rgb_color
         light_data.energy = self.energy
         if self.type == "SPOT":
@@ -105,9 +106,11 @@ class Light:
         elif self.type == "SUN":
             pass
         elif self.type == "AREA":
+            light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
 
+            light_data.use_custom_distance = True
             light_data.cutoff_distance = self.distance
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
@@ -118,7 +121,6 @@ class Light:
             light_object.rotation_euler = self.rotation_euler
         if self.type == "AREA":
             light_object.rotation_euler = self.rotation_euler
-            light_object.use_cutoff_distance = True
 
         self._link_object_to_collection(light_object, layer_path)
 
@@ -165,7 +167,7 @@ class Light:
         energy: float = data.get("Intensity")
         pos: dict = data.get("Position")
         if not all([type, energy, pos]):
-            raise ValueError("Missing required light data")
+            raise ValueError(f"Missing required light data. Got: {data}")
         location = (pos["X"], pos["Y"], pos["Z"])
         light._set_light_data(name, color, energy, type, location)
 
