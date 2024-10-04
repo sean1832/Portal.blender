@@ -57,7 +57,7 @@ class PORTAL_OT_OpenDictItemEditor(bpy.types.Operator):
 
             # ADVANCED TYPES
             elif item.value_type == "PROPERTY_PATH":
-                box.prop(item, "value_property_path", text="Property Path")
+                box.prop(item, "value_property_path", text="Path")
             elif item.value_type == "TIMESTAMP":
                 box.label(text=str(int(time.time() * 1000)))
             elif item.value_type == "UUID":

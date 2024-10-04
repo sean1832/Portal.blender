@@ -66,20 +66,17 @@ class PORTAL_OT_OpenTextEditor(bpy.types.Operator):
                 area.spaces.active.text = text
                 return {"FINISHED"}
 
-        # Try to find a non-critical area (e.g., VIEW_3D or OUTLINER) to turn into a TEXT_EDITOR
+        # Open a new window with a TEXT_EDITOR if no suitable area exists
+        bpy.ops.screen.area_split(direction='VERTICAL', factor=0.5)
+        new_area = None
         for area in context.screen.areas:
-            if area.type not in {"PROPERTIES", "OUTLINER", "PREFERENCES", "INFO"}:
-                area.type = "TEXT_EDITOR"
-                area.spaces.active.text = text
-                return {"FINISHED"}
+            if area.type == 'VIEW_3D':
+                new_area = area
+                break
 
-        # If no suitable area, open a new window with a TEXT_EDITOR
-        new_window = bpy.ops.screen.area_split(direction="VERTICAL", factor=0.5)
-        if new_window == "FINISHED":
-            for area in context.screen.areas:
-                if area.type == "TEXT_EDITOR":
-                    area.spaces.active.text = text
-                    break
+        if new_area:
+            new_area.type = 'TEXT_EDITOR'
+            new_area.spaces.active.text = text
 
         return {"FINISHED"}
 

@@ -1,3 +1,4 @@
+import time
 import queue
 import traceback
 
@@ -22,6 +23,7 @@ class ModalOperator(bpy.types.Operator):
         self.frame_change_handler = None
         self.scene_update_handler = None
         self.custom_event_handler = None
+        self.last_update_time = 0  # Track the last update time for the delay
 
     def modal(self, context, event):
         connection = self._get_connection(context)
@@ -78,9 +80,10 @@ class ModalOperator(bpy.types.Operator):
 
     def _handle_send_event(self, context, connection, server_manager):
         try:
-            message_to_send = construct_packet_dict(connection.dict_items, connection.precision)
-            if message_to_send:
-                server_manager.data_queue.put(message_to_send)
+            message_to_send = construct_packet_dict(connection.dict_items)
+            if not message_to_send or message_to_send == "{}" or message_to_send == "[]":
+                return
+            server_manager.data_queue.put(message_to_send)
         except Exception as e:
             self._report_error(
                 context,
@@ -94,6 +97,8 @@ class ModalOperator(bpy.types.Operator):
         while not server_manager.data_queue.empty():
             try:
                 data = server_manager.data_queue.get_nowait()
+                if not data or data == "{}" or data == "[]":  # Empty data
+                    break
                 StringHandler.handle_string(
                     data,
                     connection.data_type,
@@ -140,6 +145,12 @@ class ModalOperator(bpy.types.Operator):
         return {"CANCELLED"}
 
     def _send_data_on_event(self, scene, connection):
+        current_time = time.time()
+        if current_time - self.last_update_time < connection.event_timer:
+            return  # Skip sending if within the delay threshold
+
+        self.last_update_time = current_time  # Update the last event time
+
         server_manager = self._get_server_manager(connection)
         if not server_manager:
             return
@@ -166,23 +177,18 @@ class ModalOperator(bpy.types.Operator):
 
     def _register_event_handlers(self, connection):
         if "RENDER_COMPLETE" in connection.event_types:
-            # https://docs.blender.org/api/current/bpy.app.handlers.html#bpy.app.handlers.render_complete
             self.render_complete_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.render_complete.append(self.render_complete_handler)
 
         if "FRAME_CHANGE" in connection.event_types:
-            # https://docs.blender.org/api/current/bpy.app.handlers.html#bpy.app.handlers.frame_change_post
             self.frame_change_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.frame_change_post.append(self.frame_change_handler)
 
         if "SCENE_UPDATE" in connection.event_types:
-            # on any scene event
-            # https://docs.blender.org/api/current/bpy.app.handlers.html#bpy.app.handlers.depsgraph_update_post
             self.scene_update_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.depsgraph_update_post.append(self.scene_update_handler)
 
         if "CUSTOM" in connection.event_types:
-            # Custom event
             try:
                 handler = CustomHandler.load(
                     connection.custom_handler,

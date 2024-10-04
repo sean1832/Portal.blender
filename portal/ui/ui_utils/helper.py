@@ -13,7 +13,7 @@ def is_connection_duplicated(connections, name_to_check, uuid_to_ignore=None):
     return False
 
 
-def construct_packet_dict(data_items, update_precision) -> str:
+def construct_packet_dict(data_items) -> str:
     """Helper function to construct a dictionary from a collection of dictionary items"""
     payload = Payload()
     meta = {}
@@ -34,7 +34,7 @@ def construct_packet_dict(data_items, update_precision) -> str:
             scene_obj = item.value_scene_object
             if scene_obj.type == "MESH":
                 payload.add_items(
-                    Mesh.from_obj(scene_obj).to_dict(is_float=True, precision=update_precision)
+                    Mesh.from_obj(scene_obj).to_dict()
                 )
             elif scene_obj.type == "CAMERA":
                 raise NotImplementedError("Camera object type is not supported yet")
@@ -43,7 +43,7 @@ def construct_packet_dict(data_items, update_precision) -> str:
             else:
                 raise ValueError(f"Unsupported object type: {scene_obj.type}")
         elif item.value_type == "PROPERTY_PATH":
-            meta[item.key] = item.value_property_path
+            meta[item.key] = get_property_from_path(item.value_property_path)
         elif item.value_type == "UUID":
             meta[item.key] = item.value_uuid
 
@@ -51,3 +51,9 @@ def construct_packet_dict(data_items, update_precision) -> str:
         payload.set_meta(meta)
         return payload.to_json_str()
     return json.dumps(meta)
+
+
+def get_property_from_path(path: str):
+    # Use eval to resolve the path
+    value = eval(path)
+    return value

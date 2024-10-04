@@ -31,6 +31,7 @@ class PortalConnection(bpy.types.PropertyGroup):
         items=[
             ("Mesh", "Mesh", "Receive data as mesh"),
             ("Camera", "Camera", "Receive data as camera"),
+            ("Light", "Light", "Receive data as light"),
             ("Custom", "Custom", "Handle data with custom handler"),
         ],
         default="Mesh",
@@ -60,11 +61,6 @@ class PortalConnection(bpy.types.PropertyGroup):
             ("TIMER", "Timer", "Trigger on timer event (computational intensive!)"),
             ("CUSTOM", "Custom", "Trigger on custom event"),
         ],
-    )
-    precision: bpy.props.FloatProperty(
-        name="Update Precision",
-        description="minimum numerical change to trigger an update",
-        default=0.01,
     )
     dict_items: bpy.props.CollectionProperty(type=DictionaryItem)
     dict_items_index: bpy.props.IntProperty(default=0)
