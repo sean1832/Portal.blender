@@ -4,6 +4,7 @@ from typing import Tuple
 from ..data_struct.camera import Camera
 from ..data_struct.material import Material
 from ..data_struct.mesh import Mesh
+from ..data_struct.light import Light
 from .custom_handler import CustomHandler
 
 
@@ -13,7 +14,6 @@ class StringHandler:
         """Handle generic string data for different types."""
         if payload is None:
             return
-
         try:
             if data_type == "Custom":
                 StringHandler._handle_custom_data(payload, channel_name, uuid, handler_src)
@@ -21,8 +21,19 @@ class StringHandler:
                 StringHandler._handle_mesh_data(payload, channel_name)
             elif data_type == "Camera":
                 StringHandler._handle_camera_data(payload)
+            elif data_type == "Light":
+                StringHandler._handle_light_data(payload)
         except json.JSONDecodeError:
             raise ValueError(f"Unsupported data: {payload}")
+
+    @staticmethod
+    def _handle_light_data(payload):
+        """Handle light data payload."""
+        light_data = json.loads(payload)
+        if not light_data:
+            raise ValueError("Light data is empty.")
+        light = Light.from_dict(light_data)
+        light.create_or_replace("Light")
 
     @staticmethod
     def _handle_custom_data(payload, channel_name, uuid, handler_src):

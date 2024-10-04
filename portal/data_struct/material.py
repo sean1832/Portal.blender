@@ -2,7 +2,7 @@ import os
 
 import bpy
 
-from .color import ColorFactory
+from .color import Color
 
 
 class Material:
@@ -48,8 +48,8 @@ class Material:
     def _is_same_material(self):
         """Check if the existing material parameters match the new ones."""
         # Check diffuse color
-        current_diffuse = self.material.diffuse_color[:3]  # Compare RGB values only
-        new_diffuse = ColorFactory.from_hex(self.diffuse_color).to_normalized_tuple()[:3]
+        current_diffuse = self.material.diffuse_color
+        new_diffuse = Color.from_hex(self.diffuse_color).to_tuple(type='rgb', normalize=True)
 
         if not self._compare_colors(current_diffuse, new_diffuse):
             return False
@@ -81,9 +81,9 @@ class Material:
 
     def _set_diffuse_color(self):
         """Set the base color of the material."""
-        self.material.diffuse_color = ColorFactory.from_hex(
+        self.material.diffuse_color = Color.from_hex(
             self.diffuse_color
-        ).to_normalized_tuple()
+        ).to_tuple(type='rgb',normalize=True)
 
     def _apply_textures(self):
         """Apply textures to the material."""
