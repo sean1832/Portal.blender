@@ -7,17 +7,21 @@ Portal.blender is a Blender add-on that allows you to communicate data between B
 
 > *⭐️ Like this repo? please consider a star!*
 
-![image](/doc/images/portal-server-panel.png)
+| **Receiver**                                 | **Sender**                                   |
+| -------------------------------------------- | -------------------------------------------- |
+| ![image](/doc/images/portal-server-recv.png) | ![image](/doc/images/portal-server-send.png) |
 
 ## Compatibility
-| Portal.blender                                                           | Portal.Gh                                                                                                                                      |
-| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`0.1.2`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.2) | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
-| [`0.1.1`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.1) | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
-| [`0.1.0`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.0) | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
-| [`0.0.3`](https://github.com/sean1832/Portal.blender/releases/tag/0.0.3) | [`0.3.1`](https://github.com/sean1832/Portal/releases/tag/0.3.1), [`0.3.0 pre-release`](https://github.com/sean1832/Portal/releases/tag/0.3.0) |
-| `0.0.2`                                                                  | `0.2.0`, `0.1.2`, `0.1.1`                                                                                                                      |
-| `0.0.1`                                                                  | `0.2.0`, `0.1.2`, `0.1.1`                                                                                                                      |
+| Portal.blender                                                                       | Portal.Gh                                                                                                                                      |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`0.2.1`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.1)             | [`0.5.1`](https://github.com/sean1832/Portal/releases/tag/0.5.1)                                                                               |
+| [`0.2.0 pre-release`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.0) | [`0.5.0 pre-release`](https://github.com/sean1832/Portal/releases/tag/0.5.0)                                                                   |
+| [`0.1.2`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.2)             | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
+| [`0.1.1`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.1)             | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
+| [`0.1.0`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.0)             | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
+| [`0.0.3`](https://github.com/sean1832/Portal.blender/releases/tag/0.0.3)             | [`0.3.1`](https://github.com/sean1832/Portal/releases/tag/0.3.1), [`0.3.0 pre-release`](https://github.com/sean1832/Portal/releases/tag/0.3.0) |
+| `0.0.2`                                                                              | `0.2.0`, `0.1.2`, `0.1.1`                                                                                                                      |
+| `0.0.1`                                                                              | `0.2.0`, `0.1.2`, `0.1.1`                                                                                                                      |
 
 ## Installation
 - Download the latest release from the [releases page](https://github.com/sean1832/Portal.blender/releases/latest).
@@ -42,11 +46,13 @@ If this is your first time installing the Portal add-on, you will need to instal
 
 ### Custom Handlers
 You can create custom handlers to manipulate the data that is received. To do this, follow these steps:
-1. Copy and paste the [template code](/templates/custom_data_handler.py) into blender's text editor.
-2. Modify the `CustomHandler.handle` method with your custom logic.
-3. Select `Custom` from the `Connection Type` dropdown menu.
-4. Select the custom script from the `Handler` field.
-5. Click `Start Server` to start the server.
+1. Copy and paste the template code into blender's text editor and modify it to suit your needs.
+   - [Custom Receiver Handler](/templates/recv_handler.py)
+   - [Custom Sender Handler](/templates/send_handler.py)
+2. Select `Custom` from the dropdown menu.
+3. Attach the handler script to the `Handler` field or click the `folder icon` to locate the script.
+4. Click `Start` to start the server.
+
 
 ![alt text](/doc/images/custom-handler.png)
 
