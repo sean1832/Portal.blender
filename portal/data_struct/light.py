@@ -84,6 +84,7 @@ class Light:
         elif self.type == "SUN":
             pass
         elif self.type == "AREA":
+            light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
             light_data.use_custom_distance = True
@@ -105,9 +106,11 @@ class Light:
         elif self.type == "SUN":
             pass
         elif self.type == "AREA":
+            light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
 
+            light_data.use_custom_distance = True
             light_data.cutoff_distance = self.distance
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
@@ -118,7 +121,6 @@ class Light:
             light_object.rotation_euler = self.rotation_euler
         if self.type == "AREA":
             light_object.rotation_euler = self.rotation_euler
-            light_object.use_cutoff_distance = True
 
         self._link_object_to_collection(light_object, layer_path)
 
