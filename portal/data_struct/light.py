@@ -168,7 +168,7 @@ class Light:
         pos: dict = data.get("Position")
         if not all([type, pos]) or energy is None:
             raise ValueError(f"Missing required light data. Got: {data}")
-        location = (pos["X"], pos["Y"], pos["Z"])
+        location = (pos[0], pos[1], pos[2])
         light._set_light_data(name, color, energy, type, location)
 
         if type.upper() == "SPOT":
@@ -181,7 +181,7 @@ class Light:
             if not all([spot_size, spot_blend, direction]):
                 raise ValueError("Missing required spot light data")
             direction_vector = mathutils.Vector(
-                (direction["X"], direction["Y"], direction["Z"])
+                (direction[0], direction[1], direction[2])
             ).normalized()
             # TODO: implement spot light scale. Currently scale is default (1, 1, 1).
             light._set_spot_data(spot_size, spot_blend, direction_vector)
@@ -195,12 +195,12 @@ class Light:
             direction: dict = data.get("Direction")
             if not all([length_dict, width_dict, direction]):
                 raise ValueError("Missing required area light data")
-            length_vec = mathutils.Vector((length_dict["X"], length_dict["Y"], length_dict["Z"]))
+            length_vec = mathutils.Vector((length_dict[0], length_dict[1], length_dict[2]))
             length = length_vec.length
-            width_vec = mathutils.Vector((width_dict["X"], width_dict["Y"], width_dict["Z"]))
+            width_vec = mathutils.Vector((width_dict[0], width_dict[1], width_dict[2]))
             width = width_vec.length
 
-            direction_vec = mathutils.Vector((direction["X"], direction["Y"], direction["Z"]))
+            direction_vec = mathutils.Vector((direction[0], direction[1], direction[2]))
             distance = direction_vec.length
 
             # Normalize vectors
@@ -220,7 +220,7 @@ class Light:
             rotation_euler = rotation_matrix.to_euler()
 
             # center point
-            center = mathutils.Vector((pos["X"], pos["Y"], pos["Z"]))
+            center = mathutils.Vector((pos[0], pos[1], pos[2]))
 
             light._set_area_data((length, width), distance, rotation_euler)
             light.location = center
