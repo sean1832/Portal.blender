@@ -56,5 +56,11 @@ You can create custom handlers to manipulate the data that is received. To do th
 
 ![alt text](/doc/images/custom-handler.png)
 
+## Roadmap
+### v0.2.2
+- [ ] Fix area light position and rotation.
+### v0.3.0
+- [ ] Add mouse up / down event for the sender. This is to prevent the sender from sending data continuously.
+
 ## Documentation
 For more information, visit the [Portal](https://github.com/sean1832/portal).
