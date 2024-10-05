@@ -16,10 +16,11 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
     def execute(self, context):
         # Check if there are any existing connections
         connections = context.scene.portal_connections
-        new_name = f"channel-{len(connections) + 1}"
-        if is_connection_duplicated(connections, new_name):
-            self.report({"ERROR"}, f"Connection name '{new_name}' already exists!")
-            return {"CANCELLED"}
+        channel_num = len(connections) + 1
+        new_name = f"channel-{channel_num}"
+
+        while is_connection_duplicated(connections, new_name):
+            new_name = f"channel-{channel_num + 1}"
 
         new_connection = connections.add()
         new_connection.uuid = str(uuid.uuid4())
@@ -77,7 +78,7 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
     uuid: bpy.props.StringProperty()  # type: ignore
 
     def execute(self, context):
-        connection = next(
+        connection: PortalConnection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
 
