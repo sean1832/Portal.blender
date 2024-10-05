@@ -35,11 +35,11 @@ class Light:
             self._create_new(layer_path)
 
     def _set_light_data(
-        self, name: str, color: tuple, energy: float, type: str, location: tuple
+        self, name: str, color: tuple, intensity: float, type: str, location: tuple
     ) -> None:
         self.name = name
         self.rgb_color = color
-        self.energy = energy
+        self.energy = intensity * 1000 # Convert to watts
         self.location = location
         if type.upper() not in ["SPOT", "POINT", "DIRECTIONAL", "RECTANGULAR"]:
             raise ValueError(f"Unsupported light type: {type}")
@@ -157,12 +157,12 @@ class Light:
         name: str = data.get("Name")
         color: tuple = Color.from_hex(data.get("Color", "#FFFFFF")).to_tuple("rgb", normalize=True)
         type: str = data.get("LightType")
-        energy: float = data.get("Intensity")
+        intensity: float = data.get("Intensity")
         pos: dict = data.get("Position")
-        if not all([type, pos]) or energy is None:
+        if not all([type, pos]) or intensity is None:
             raise ValueError(f"Missing required light data. Got: {data}")
         location = (pos[0], pos[1], pos[2])
-        light._set_light_data(name, color, energy, type, location)
+        light._set_light_data(name, color, intensity, type, location)
 
         if type.upper() == "SPOT":
             spot_size: float = data.get("SpotAngleRadians")
