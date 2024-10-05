@@ -19,8 +19,10 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
         channel_num = len(connections) + 1
         new_name = f"channel-{channel_num}"
 
+        count = 1
         while is_connection_duplicated(connections, new_name):
-            new_name = f"channel-{channel_num + 1}"
+            new_name = f"channel-{channel_num + count}"
+            count += 1
 
         new_connection = connections.add()
         new_connection.uuid = str(uuid.uuid4())
