@@ -166,7 +166,7 @@ class Light:
         type: str = data.get("LightType")
         energy: float = data.get("Intensity")
         pos: dict = data.get("Position")
-        if not all([type, energy, pos]):
+        if not all([type, pos]) or energy is None:
             raise ValueError(f"Missing required light data. Got: {data}")
         location = (pos["X"], pos["Y"], pos["Z"])
         light._set_light_data(name, color, energy, type, location)
