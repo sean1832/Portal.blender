@@ -162,7 +162,7 @@ class Light:
     def from_dict(data: dict) -> "Light":
         light = Light()
         name: str = data.get("Name")
-        color: tuple = Color.from_hex(data.get("Color", "#FFFFFF")).to_tuple("rgb")
+        color: tuple = Color.from_hex(data.get("Color", "#FFFFFF")).to_tuple("rgb", normalize=True)
         type: str = data.get("LightType")
         energy: float = data.get("Intensity")
         pos: dict = data.get("Position")
