@@ -3,6 +3,7 @@ import uuid
 import bpy
 
 from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
+from ..properties.connection_properties import PortalConnection
 from ..ui_utils.helper import is_connection_duplicated
 
 
@@ -41,13 +42,15 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
 
     def execute(self, context):
         # Find the connection with the given UUID
-        connection = next(
+        connection: PortalConnection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
 
         if connection:
             index = context.scene.portal_connections.find(connection.name)
-            server_manager = CONNECTION_MANAGER.get(connection.connection_type, self.uuid)
+            server_manager = CONNECTION_MANAGER.get(
+                connection.connection_type, self.uuid, connection.direction
+            )
 
             # Stop the server if it's running
             if connection.running:
@@ -88,7 +91,9 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
             self.report({"ERROR"}, f"Connection name '{connection.name}' already exists!")
             return {"CANCELLED"}
 
-        server_manager = CONNECTION_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
+        server_manager = CONNECTION_MANAGER.get(
+            connection.connection_type, self.uuid, connection.direction
+        )
 
         if connection.running or (server_manager and server_manager.is_running()):
             # Stop the server if it's running
