@@ -25,7 +25,6 @@ class Light:
 
         # Area light properties
         self.size: Optional[tuple] = None
-        self.distance: Optional[float] = None
 
     def create_or_replace(self, object_name: str, layer_path: Optional[str] = None) -> None:
         self.object_name = object_name
@@ -36,11 +35,11 @@ class Light:
             self._create_new(layer_path)
 
     def _set_light_data(
-        self, name: str, color: tuple, energy: float, type: str, location: tuple
+        self, name: str, color: tuple, intensity: float, type: str, location: tuple
     ) -> None:
         self.name = name
         self.rgb_color = color
-        self.energy = energy
+        self.energy = intensity * 1000 # Convert to watts
         self.location = location
         if type.upper() not in ["SPOT", "POINT", "DIRECTIONAL", "RECTANGULAR"]:
             raise ValueError(f"Unsupported light type: {type}")
@@ -62,9 +61,8 @@ class Light:
         else:
             self.rotation_euler = mathutils.Euler((0, 0, 0))
 
-    def _set_area_data(self, size: tuple, distance: float, rotation_euler: Vector) -> None:
+    def _set_area_data(self, size: tuple, rotation_euler: Vector) -> None:
         self.size = size
-        self.distance = distance
         self.rotation_euler = rotation_euler
 
     def _replace_light(self, existing_obj: Any) -> None:
@@ -87,8 +85,6 @@ class Light:
             light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
-            light_data.use_custom_distance = True
-            light_data.cutoff_distance = self.distance
             existing_obj.rotation_euler = self.rotation_euler
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
@@ -109,9 +105,6 @@ class Light:
             light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
-
-            light_data.use_custom_distance = True
-            light_data.cutoff_distance = self.distance
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
 
@@ -162,14 +155,14 @@ class Light:
     def from_dict(data: dict) -> "Light":
         light = Light()
         name: str = data.get("Name")
-        color: tuple = Color.from_hex(data.get("Color", "#FFFFFF")).to_tuple("rgb", normalize=True)
+        color: tuple = Color.from_hex(data.get("Color", "#FFFFFF"), "srgb").to_tuple("rgb", normalize=True)
         type: str = data.get("LightType")
-        energy: float = data.get("Intensity")
+        intensity: float = data.get("Intensity")
         pos: dict = data.get("Position")
-        if not all([type, pos]) or energy is None:
+        if not all([type, pos]) or intensity is None:
             raise ValueError(f"Missing required light data. Got: {data}")
-        location = (pos["X"], pos["Y"], pos["Z"])
-        light._set_light_data(name, color, energy, type, location)
+        location = (pos[0], pos[1], pos[2])
+        light._set_light_data(name, color, intensity, type, location)
 
         if type.upper() == "SPOT":
             spot_size: float = data.get("SpotAngleRadians")
@@ -181,7 +174,7 @@ class Light:
             if not all([spot_size, spot_blend, direction]):
                 raise ValueError("Missing required spot light data")
             direction_vector = mathutils.Vector(
-                (direction["X"], direction["Y"], direction["Z"])
+                (direction[0], direction[1], direction[2])
             ).normalized()
             # TODO: implement spot light scale. Currently scale is default (1, 1, 1).
             light._set_spot_data(spot_size, spot_blend, direction_vector)
@@ -195,13 +188,12 @@ class Light:
             direction: dict = data.get("Direction")
             if not all([length_dict, width_dict, direction]):
                 raise ValueError("Missing required area light data")
-            length_vec = mathutils.Vector((length_dict["X"], length_dict["Y"], length_dict["Z"]))
+            length_vec = mathutils.Vector((length_dict[0], length_dict[1], length_dict[2]))
             length = length_vec.length
-            width_vec = mathutils.Vector((width_dict["X"], width_dict["Y"], width_dict["Z"]))
+            width_vec = mathutils.Vector((width_dict[0], width_dict[1], width_dict[2]))
             width = width_vec.length
 
-            direction_vec = mathutils.Vector((direction["X"], direction["Y"], direction["Z"]))
-            distance = direction_vec.length
+            direction_vec = mathutils.Vector((direction[0], direction[1], direction[2]))
 
             # Normalize vectors
             length_vec.normalize()
@@ -220,9 +212,9 @@ class Light:
             rotation_euler = rotation_matrix.to_euler()
 
             # center point
-            center = mathutils.Vector((pos["X"], pos["Y"], pos["Z"]))
+            center = mathutils.Vector((pos[0], pos[1], pos[2]))
 
-            light._set_area_data((length, width), distance, rotation_euler)
+            light._set_area_data((length, width), rotation_euler)
             light.location = center
         else:
             raise ValueError(f"Unsupported light type: {type}")

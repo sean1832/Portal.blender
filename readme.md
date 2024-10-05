@@ -60,7 +60,6 @@ You can create custom handlers to manipulate the data that is received. To do th
 ## Roadmap
 ### v0.3.0
 - [ ] Add mouse up / down event for the sender.
-- [ ] Simplify the mesh vertex data into a list of tuples. `[[x, y, z], [x, y, z], ...]`
 - [ ] Implement more material properties.
 
 
