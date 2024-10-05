@@ -25,7 +25,6 @@ class Light:
 
         # Area light properties
         self.size: Optional[tuple] = None
-        self.distance: Optional[float] = None
 
     def create_or_replace(self, object_name: str, layer_path: Optional[str] = None) -> None:
         self.object_name = object_name
@@ -62,9 +61,8 @@ class Light:
         else:
             self.rotation_euler = mathutils.Euler((0, 0, 0))
 
-    def _set_area_data(self, size: tuple, distance: float, rotation_euler: Vector) -> None:
+    def _set_area_data(self, size: tuple, rotation_euler: Vector) -> None:
         self.size = size
-        self.distance = distance
         self.rotation_euler = rotation_euler
 
     def _replace_light(self, existing_obj: Any) -> None:
@@ -87,8 +85,6 @@ class Light:
             light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
-            light_data.use_custom_distance = True
-            light_data.cutoff_distance = self.distance
             existing_obj.rotation_euler = self.rotation_euler
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
@@ -109,9 +105,6 @@ class Light:
             light_data.shape = "RECTANGLE"
             light_data.size = self.size[0]
             light_data.size_y = self.size[1]
-
-            light_data.use_custom_distance = True
-            light_data.cutoff_distance = self.distance
         else:
             raise ValueError(f"Unsupported light type: {self.type}")
 
@@ -201,7 +194,6 @@ class Light:
             width = width_vec.length
 
             direction_vec = mathutils.Vector((direction[0], direction[1], direction[2]))
-            distance = direction_vec.length
 
             # Normalize vectors
             length_vec.normalize()
@@ -222,7 +214,7 @@ class Light:
             # center point
             center = mathutils.Vector((pos[0], pos[1], pos[2]))
 
-            light._set_area_data((length, width), distance, rotation_euler)
+            light._set_area_data((length, width), rotation_euler)
             light.location = center
         else:
             raise ValueError(f"Unsupported light type: {type}")
