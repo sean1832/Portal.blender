@@ -219,15 +219,11 @@ class Light:
             rotation_matrix = mathutils.Matrix((x_axis, y_axis, z_axis)).transposed()
             rotation_euler = rotation_matrix.to_euler()
 
-            # Calculate the offset vector to center the area light
-            offset_vector = (x_axis * (length / 2)) + (y_axis * (width / 2))
-
-            # Adjust the location
-            original_location = mathutils.Vector((pos["X"], pos["Y"], pos["Z"]))
-            adjusted_location = original_location + offset_vector
+            # center point
+            center = mathutils.Vector((pos["X"], pos["Y"], pos["Z"]))
 
             light._set_area_data((length, width), distance, rotation_euler)
-            light.location = adjusted_location
+            light.location = center
         else:
             raise ValueError(f"Unsupported light type: {type}")
 
