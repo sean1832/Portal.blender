@@ -14,6 +14,7 @@ Portal.blender is a Blender add-on that allows you to communicate data between B
 ## Compatibility
 | Portal.blender                                                                       | Portal.Gh                                                                                                                                      |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`0.2.2`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.2)             | [`0.5.1`](https://github.com/sean1832/Portal/releases/tag/0.5.1)                                                                               |
 | [`0.2.1`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.1)             | [`0.5.1`](https://github.com/sean1832/Portal/releases/tag/0.5.1)                                                                               |
 | [`0.2.0 pre-release`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.0) | [`0.5.0 pre-release`](https://github.com/sean1832/Portal/releases/tag/0.5.0)                                                                   |
 | [`0.1.2`](https://github.com/sean1832/Portal.blender/releases/tag/0.1.2)             | [`0.4.0`](https://github.com/sean1832/Portal/releases/tag/0.4.0)                                                                               |
@@ -60,6 +61,7 @@ You can create custom handlers to manipulate the data that is received. To do th
 ### v0.3.0
 - [ ] Add mouse up / down event for the sender.
 - [ ] Simplify the mesh vertex data into a list of tuples. `[[x, y, z], [x, y, z], ...]`
+- [ ] Implement more material properties.
 
 
 ## Documentation
