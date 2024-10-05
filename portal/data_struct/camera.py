@@ -52,7 +52,7 @@ class Camera:
 
         self._set_camera_resolution()
         self._set_camera_fov_and_lens()
-    
+
     def set_cliping(self, near, far):
         cam = self.camera_object
         cam.data.clip_start = near
@@ -112,16 +112,16 @@ class Camera:
     def from_dict(camera_dict):
         """Create a Camera object from raw data."""
         position = (
-            camera_dict["Position"]["X"],
-            camera_dict["Position"]["Y"],
-            camera_dict["Position"]["Z"],
+            camera_dict["Position"][0],
+            camera_dict["Position"][1],
+            camera_dict["Position"][2],
         )
         look_direction = (
-            camera_dict["LookDirection"]["X"],
-            camera_dict["LookDirection"]["Y"],
-            camera_dict["LookDirection"]["Z"],
+            camera_dict["LookDirection"][0],
+            camera_dict["LookDirection"][1],
+            camera_dict["LookDirection"][2],
         )
-        resolution = (camera_dict["Resolution"]["X"], camera_dict["Resolution"]["Y"])
+        resolution = (camera_dict["Resolution"][0], camera_dict["Resolution"][1])
         focal_length = camera_dict.get("FocalLength", 50.0)
         vertical_fov = camera_dict.get("VerticalFov", 35.0)
         horizontal_fov = camera_dict.get("HorizontalFov", 50.0)

@@ -1,11 +1,10 @@
 import bpy
+import numpy as np
+from mathutils import Vector
 
 from .color import Color
 from .material import Material
 from .p_types import PGeoType
-
-import numpy as np
-from mathutils import Vector
 
 
 class Mesh:
@@ -28,8 +27,8 @@ class Mesh:
         Returns:
             dict: Serialized mesh data.
         """
-        vertices = [{"X": v[0], "Y": v[1], "Z": v[2]} for v in self.vertices]
-        uvs = [{"X": uv[0], "Y": uv[1]} for uv in self.uvs]
+        vertices = [[v[0], v[1], v[2]] for v in self.vertices]
+        uvs = [[uv[0], uv[1]] for uv in self.uvs]
 
         mesh_dict = {
             "Type": PGeoType.MESH.value,
@@ -37,7 +36,7 @@ class Mesh:
             "Faces": [list(face) for face in self.faces],
             "UVs": uvs,
             "VertexColors": [
-                Color.from_normalized_tuple(col).to_hex('rgb') for col in self.vertex_colors
+                Color.from_normalized_tuple(col).to_hex("rgb") for col in self.vertex_colors
             ],
         }
         return {"Items": mesh_dict, "Meta": meta if meta else {}}
@@ -181,9 +180,9 @@ class Mesh:
     @staticmethod
     def from_dict(dict):
         """Create a Mesh object from json dictionary."""
-        vertices = [(v["X"], v["Y"], v["Z"]) for v in dict["Vertices"]]
+        vertices = [(v[0], v[1], v[2]) for v in dict["Vertices"]]
         faces = [tuple(face_list) for face_list in dict["Faces"]]
-        uvs = [(uv["X"], uv["Y"]) for uv in dict.get("UVs", [])]
+        uvs = [(uv[0], uv[1]) for uv in dict.get("UVs", [])]
         color_hexs = dict.get("VertexColors")
 
         vertex_colors = None
@@ -208,7 +207,7 @@ class Mesh:
 
         # Use bulk access to retrieve vertex data and apply transformation
         vertex_data = np.empty(len(obj.data.vertices) * 3)
-        obj.data.vertices.foreach_get('co', vertex_data)
+        obj.data.vertices.foreach_get("co", vertex_data)
         vertex_data = vertex_data.reshape(-1, 3)
 
         # Transform vertices by matrix_world
@@ -220,13 +219,13 @@ class Mesh:
         # Handle vertex colors
         if obj.data.vertex_colors:
             color_data = np.empty(len(obj.data.vertex_colors.active.data) * 4)
-            obj.data.vertex_colors.active.data.foreach_get('color', color_data)
+            obj.data.vertex_colors.active.data.foreach_get("color", color_data)
             mesh.vertex_colors = list(color_data.reshape(-1, 4))
 
         # Handle UVs
         if obj.data.uv_layers:
             uv_data = np.empty(len(obj.data.uv_layers.active.data) * 2)
-            obj.data.uv_layers.active.data.foreach_get('uv', uv_data)
+            obj.data.uv_layers.active.data.foreach_get("uv", uv_data)
             mesh.uvs = list(uv_data.reshape(-1, 2))
 
         return mesh
