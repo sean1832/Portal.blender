@@ -67,6 +67,10 @@ class ModalOperator(bpy.types.Operator):
         MODAL_OPERATORS[self.uuid] = self
         self._register_event_handlers(connection)
 
+        if connection.direction == "SEND":
+            # send initial data
+            self._handle_send_event(context, connection, self._get_server_manager(connection))
+
         return {"RUNNING_MODAL"}
 
     def cancel(self, context):
