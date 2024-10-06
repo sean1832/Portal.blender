@@ -1,12 +1,13 @@
 import asyncio
+import queue
 import threading
 import traceback
-import queue
 
 import bpy  # type: ignore
 
 try:
     from aiohttp import ClientSession  # type: ignore
+
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
@@ -19,34 +20,36 @@ from ...utils.crypto import Crc16
 class WebSocketSenderManager:
     def __init__(self, uuid):
         self.uuid = uuid
-        self.connection = next(
+        self.error = None
+        self.error_lock = threading.Lock()
+        self.traceback = None
+        self.data_queue = queue.Queue()
+
+        # private
+        self._connection = next(
             (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
             None,
         )
-        self.shutdown_event = threading.Event()
-        self.error_lock = threading.Lock()
-        self.error = None
-        self.traceback = None
+        self._shutdown_event = threading.Event()
         self._client_thread = None
-        self.data_queue = queue.Queue()
         self._last_checksum = None
         self._session = None
         self._ws = None
-        self.loop = None  # asyncio loop reference
+        self._loop = None  # asyncio loop reference
 
     def _run_loop_in_thread(self):
         """
         Initialize and run the asyncio event loop in a separate thread.
         """
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
         # Schedule the send loop as a task
-        self.loop.create_task(self._send_loop())
+        self._loop.create_task(self._send_loop())
         try:
-            self.loop.run_forever()
+            self._loop.run_forever()
         finally:
             # Close the loop when run_forever is exited
-            self.loop.close()
+            self._loop.close()
 
     async def _send_loop(self):
         """
@@ -58,13 +61,13 @@ class WebSocketSenderManager:
 
         try:
             async with ClientSession() as self._session:
-                ws_url = f"ws://{self.connection.host}:{self.connection.port}/"
+                ws_url = f"ws://{self._connection.host}:{self._connection.port}/"
                 async with self._session.ws_connect(ws_url) as self._ws:
                     print(f"Connected to WebSocket at {ws_url}")
-                    while not self.shutdown_event.is_set():
+                    while not self._shutdown_event.is_set():
                         try:
                             # Attempt to get data with a timeout
-                            data = await self.loop.run_in_executor(
+                            data = await self._loop.run_in_executor(
                                 None, self.data_queue.get, True, 0.1
                             )
                             await self._send_data(data, is_compressed=False)
@@ -110,7 +113,7 @@ class WebSocketSenderManager:
             )
 
             await self._ws.send_bytes(packet.serialize())
-            print(f"Sent WebSocket packet to {self.connection.host}:{self.connection.port}")
+            print(f"Sent WebSocket packet to {self._connection.host}:{self._connection.port}")
             self._last_checksum = checksum
 
         except Exception as e:
@@ -137,7 +140,7 @@ class WebSocketSenderManager:
             print(f"Error during shutdown: {e}")
         finally:
             # Schedule loop.stop() to be called in the event loop's thread
-            self.loop.call_soon_threadsafe(self.loop.stop)
+            self._loop.call_soon_threadsafe(self._loop.stop)
 
     def start_server(self):
         """
@@ -151,13 +154,11 @@ class WebSocketSenderManager:
             print("WebSocket sender is already running.")
             return
 
-        self.shutdown_event.clear()
-        self._client_thread = threading.Thread(
-            target=self._run_loop_in_thread, daemon=True
-        )
+        self._shutdown_event.clear()
+        self._client_thread = threading.Thread(target=self._run_loop_in_thread, daemon=True)
         self._client_thread.start()
         print(
-            f"WebSocket sender started for connection uuid: {self.uuid}, name: {self.connection.name}"
+            f"WebSocket sender started for connection uuid: {self.uuid}, name: {self._connection.name}"
         )
 
     def stop_server(self):
@@ -172,17 +173,15 @@ class WebSocketSenderManager:
             print("WebSocket sender was not started.")
             return
 
-        self.shutdown_event.set()
-        if self.loop:
+        self._shutdown_event.set()
+        if self._loop:
             # Schedule the shutdown coroutine
-            future = asyncio.run_coroutine_threadsafe(
-                self._shutdown_sender(), self.loop
-            )
+            future = asyncio.run_coroutine_threadsafe(self._shutdown_sender(), self._loop)
             try:
                 future.result(timeout=5)  # Wait for shutdown to complete
             except asyncio.TimeoutError:
                 print("Shutdown timed out. Forcing loop stop.")
-                self.loop.call_soon_threadsafe(self.loop.stop)
+                self._loop.call_soon_threadsafe(self._loop.stop)
 
         if self._client_thread:
             self._client_thread.join(timeout=5)
@@ -190,7 +189,7 @@ class WebSocketSenderManager:
                 print("Client thread is still running after shutdown attempt.")
             else:
                 print(
-                    f"WebSocket sender stopped for connection uuid: {self.uuid}, name: {self.connection.name}"
+                    f"WebSocket sender stopped for connection uuid: {self.uuid}, name: {self._connection.name}"
                 )
             self._client_thread = None
 
@@ -204,4 +203,4 @@ class WebSocketSenderManager:
         """
         Check if the sender has been shut down.
         """
-        return self.shutdown_event.is_set()
+        return self._shutdown_event.is_set()

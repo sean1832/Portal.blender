@@ -1,34 +1,38 @@
 import mmap
+import queue
 import threading
 import traceback
-import queue
+
 import bpy  # type: ignore
 
 from ...data_struct.packet import Packet
 from ...handlers.binary_handler import BinaryHandler
 from ...utils.crypto import Crc16
 
+
 class MMFSenderManager:
     def __init__(self, uuid):
         self.uuid = uuid
-        self.connection = next(
+        self.traceback = None
+        self.error = None
+        self.error_lock = threading.Lock()
+        self.data_queue = queue.Queue()
+
+        # private
+        self._connection = next(
             (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
             None,
         )
-        self.shutdown_event = threading.Event()
-        self.mmf = None
+        self._shutdown_event = threading.Event()
+        self._mmf = None
         self._server_thread = None
-        self.error = None
-        self.traceback = None
-        self.error_lock = threading.Lock()
         self._last_checksum = None
-        self.data_queue = queue.Queue()
 
     def _send_data(self, data: str, is_compressed=False):
-        if not self.mmf:
+        if not self._mmf:
             return
         try:
-            self.mmf.seek(0)
+            self._mmf.seek(0)
             data_bytes = data.encode("utf-8")
             checksum = Crc16().compute_checksum(data_bytes)
 
@@ -48,8 +52,8 @@ class MMFSenderManager:
             )
 
             # Write data to the mmap buffer
-            self.mmf.write(packet.serialize())  # Write actual data
-            self.mmf.flush()  # Make sure data is written to the file
+            self._mmf.write(packet.serialize())  # Write actual data
+            self._mmf.flush()  # Make sure data is written to the file
             self._last_checksum = checksum
 
         except Exception as e:
@@ -59,12 +63,12 @@ class MMFSenderManager:
 
     def _run_sender(self):
         try:
-            mmf_name = self.connection.name
-            buffer_size = self.connection.buffer_size * 1024  # Convert KB to bytes
-            self.mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
+            mmf_name = self._connection.name
+            buffer_size = self._connection.buffer_size * 1024  # Convert KB to bytes
+            self._mmf = mmap.mmap(-1, buffer_size, tagname=mmf_name)
 
             # Continuous loop to check data and shutdown event
-            while not self.shutdown_event.is_set():
+            while not self._shutdown_event.is_set():
                 try:
                     data = self.data_queue.get(timeout=0.1)  # Non-blocking queue check
                     self._send_data(data)
@@ -79,25 +83,25 @@ class MMFSenderManager:
             self._close_mmf()
 
     def _close_mmf(self):
-        if self.mmf:
-            self.mmf.close()
-            self.mmf = None
+        if self._mmf:
+            self._mmf.close()
+            self._mmf = None
 
     def start_server(self):
-        self.shutdown_event.clear()
+        self._shutdown_event.clear()
         self._server_thread = threading.Thread(target=self._run_sender, daemon=True)
         self._server_thread.start()
-        print(f"MMF sender started for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(f"MMF sender started for connection uuid: {self.uuid}, name: {self._connection.name}")
 
     def stop_server(self):
-        self.shutdown_event.set()
+        self._shutdown_event.set()
         if self._server_thread:
             self._server_thread.join()
         self._close_mmf()
-        print(f"MMF sender stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(f"MMF sender stopped for connection uuid: {self.uuid}, name: {self._connection.name}")
 
     def is_running(self):
         return self._server_thread is not None and self._server_thread.is_alive()
 
     def is_shutdown(self):
-        return self.shutdown_event.is_set()
+        return self._shutdown_event.is_set()
