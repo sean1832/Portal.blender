@@ -11,7 +11,7 @@ from .senders.udp_sender import UDPSenderManager
 from .senders.websockets_sender import WebSocketSenderManager
 
 
-class ConnectionManager:
+class ServerManager:
     def __init__(self):
         self.managers: Dict[str, Tuple[Server, str]] = {}
 

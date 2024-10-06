@@ -4,7 +4,7 @@ from typing import List, Optional
 import bpy
 from bpy.types import Context
 
-from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
+from ..globals import MODAL_OPERATORS, SERVER_MANAGER
 from ..properties.connection_properties import PortalConnection
 
 
@@ -62,7 +62,7 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
 
         if connection:
             index = context.scene.portal_connections.find(connection.name)
-            server_manager = CONNECTION_MANAGER.get(
+            server_manager = SERVER_MANAGER.get(
                 connection.connection_type, self.uuid, connection.direction
             )
 
@@ -71,7 +71,7 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
                 if server_manager and server_manager.is_running():
                     server_manager.stop_server()
                     connection.running = False
-                    CONNECTION_MANAGER.remove(self.uuid)
+                    SERVER_MANAGER.remove(self.uuid)
 
                 # Cancel the modal operator if it is running
                 if uuid in MODAL_OPERATORS:
@@ -105,7 +105,7 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
             self.report({"ERROR"}, f"Connection name '{connection.name}' already exists!")
             return {"CANCELLED"}
 
-        server_manager = CONNECTION_MANAGER.get(
+        server_manager = SERVER_MANAGER.get(
             connection.connection_type, self.uuid, connection.direction
         )
 
@@ -114,7 +114,7 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
             if server_manager and server_manager.is_running():
                 server_manager.stop_server()
                 connection.running = False
-                CONNECTION_MANAGER.remove(self.uuid)  # Remove the manager from SERVER_MANAGERS
+                SERVER_MANAGER.remove(self.uuid)  # Remove the manager from SERVER_MANAGERS
                 # Cancel the modal operator if it is running and unregister the event handlers
                 if self.uuid in MODAL_OPERATORS:
                     modal_operator = MODAL_OPERATORS[self.uuid]

@@ -12,7 +12,7 @@ from ...data_struct.payload import Payload
 from ...handlers.custom_handler import CustomHandler
 from ...handlers.string_handler import StringHandler
 from ...server.interface import Server
-from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
+from ..globals import MODAL_OPERATORS, SERVER_MANAGER
 from ..properties.connection_properties import PortalConnection
 
 
@@ -206,7 +206,7 @@ class ModalOperator(bpy.types.Operator):
         if server_manager.is_running():
             server_manager.stop_server()
         connection.running = False
-        CONNECTION_MANAGER.remove(self.uuid)
+        SERVER_MANAGER.remove(self.uuid)
         self.cancel(context)
         return {"CANCELLED"}
 
@@ -233,7 +233,7 @@ class ModalOperator(bpy.types.Operator):
         )
 
     def _get_server_manager(self, connection: PortalConnection) -> Server:
-        return CONNECTION_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
+        return SERVER_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
 
     def _is_server_shutdown(self, server_manager: Server) -> bool:
         if server_manager.is_shutdown():
