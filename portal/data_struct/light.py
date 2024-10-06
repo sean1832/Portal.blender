@@ -39,7 +39,7 @@ class Light:
     ) -> None:
         self.name = name
         self.rgb_color = color
-        self.energy = intensity * 1000 # Convert to watts
+        self.energy = intensity * 1000  # Convert to watts
         self.location = location
         if type.upper() not in ["SPOT", "POINT", "DIRECTIONAL", "RECTANGULAR"]:
             raise ValueError(f"Unsupported light type: {type}")
@@ -155,7 +155,9 @@ class Light:
     def from_dict(data: dict) -> "Light":
         light = Light()
         name: str = data.get("Name")
-        color: tuple = Color.from_hex(data.get("Color", "#FFFFFF"), "srgb").to_tuple("rgb", normalize=True)
+        color: tuple = Color.from_hex(data.get("Color", "#FFFFFF"), "srgb").to_tuple(
+            "rgb", normalize=True
+        )
         type: str = data.get("LightType")
         intensity: float = data.get("Intensity")
         pos: dict = data.get("Position")
@@ -167,11 +169,11 @@ class Light:
         if type.upper() == "SPOT":
             spot_size: float = data.get("SpotAngleRadians")
             radii: dict = data.get("SpotRadii")
-            spot_blend = 1 - (
+            spot_blend: float = 1 - (
                 radii.get("Inner") / radii.get("Outer")
             )  # FIXME: blender's spot_blend is probably not linear.
-            direction: dict = data.get("Direction")
-            if not all([spot_size, spot_blend, direction]):
+            direction: dict = data.get("Direction", None)
+            if spot_size is None or direction is None or spot_blend is None:
                 raise ValueError("Missing required spot light data")
             direction_vector = mathutils.Vector(
                 (direction[0], direction[1], direction[2])
