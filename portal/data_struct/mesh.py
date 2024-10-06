@@ -150,23 +150,22 @@ class Mesh:
             parent_collection = None
 
             for i, layer in enumerate(layer_names):
-                # If it's the last layer in the path, check for duplicates and rename if necessary
-                if i == len(layer_names) - 1:
-                    collection_name = layer
-                    suffix = 1
-                    while bpy.data.collections.get(collection_name):
-                        collection_name = f"{layer}_{suffix}"
-                        suffix += 1
-                else:
-                    collection_name = layer
+                # Initialize the collection as None
+                collection = None
 
-                # Create or get the collection
-                collection = bpy.data.collections.get(collection_name)
-                if not collection:
-                    collection = bpy.data.collections.new(collection_name)
-                    if parent_collection:
+                if parent_collection:
+                    # Check if the collection exists in the parent collection's children
+                    collection = parent_collection.children.get(layer)
+                    if not collection:
+                        # Create the collection under the parent collection
+                        collection = bpy.data.collections.new(layer)
                         parent_collection.children.link(collection)
-                    else:
+                else:
+                    # For root-level collections, check in the scene's collection
+                    collection = bpy.context.scene.collection.children.get(layer)
+                    if not collection:
+                        # Create the collection under the scene's collection
+                        collection = bpy.data.collections.new(layer)
                         bpy.context.scene.collection.children.link(collection)
 
                 # Set parent for the next nested layer
@@ -176,6 +175,7 @@ class Mesh:
             parent_collection.objects.link(obj)
         else:
             bpy.context.collection.objects.link(obj)
+
 
     @staticmethod
     def from_dict(dict):
