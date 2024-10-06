@@ -1,10 +1,21 @@
 import uuid
+from typing import List, Optional
 
 import bpy
+from bpy.types import Context
 
 from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
 from ..properties.connection_properties import PortalConnection
-from ..ui_utils.helper import is_connection_duplicated
+
+
+def is_connection_duplicated(
+    connections: List[PortalConnection], name_to_check: str, uuid_to_ignore: Optional[str] = None
+):
+    """Helper function to check if a connection name is duplicated"""
+    for conn in connections:
+        if conn.name == name_to_check and conn.uuid != uuid_to_ignore:
+            return True
+    return False
 
 
 # Operator to add new connection
@@ -13,11 +24,11 @@ class PORTAL_OT_AddConnection(bpy.types.Operator):
     bl_label = "Add New Connection"
     bl_description = "Add a new connection"
 
-    def execute(self, context):
+    def execute(self, context: Context):
         # Check if there are any existing connections
-        connections = context.scene.portal_connections
-        channel_num = len(connections) + 1
-        new_name = f"channel-{channel_num}"
+        connections: List[PortalConnection] = context.scene.portal_connections
+        channel_num: int = len(connections) + 1
+        new_name: str = f"channel-{channel_num}"
 
         count = 1
         while is_connection_duplicated(connections, new_name):
@@ -43,7 +54,7 @@ class PORTAL_OT_RemoveConnection(bpy.types.Operator):
     bl_description = "Remove the selected connection"
     uuid: bpy.props.StringProperty()  # type: ignore
 
-    def execute(self, context):
+    def execute(self, context: Context):
         # Find the connection with the given UUID
         connection: PortalConnection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
@@ -79,7 +90,7 @@ class PORTAL_OT_ToggleServer(bpy.types.Operator):
     bl_description = "Start or stop the selected server"
     uuid: bpy.props.StringProperty()  # type: ignore
 
-    def execute(self, context):
+    def execute(self, context: Context):
         connection: PortalConnection = next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )

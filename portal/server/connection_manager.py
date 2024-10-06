@@ -1,3 +1,6 @@
+from typing import Dict, Tuple
+
+from .interface import Server
 from .listeners.mmap_server import MMFListenerManager
 from .listeners.pipe_server import PipeListenerManager
 from .listeners.udp_server import UDPListenerManager
@@ -10,9 +13,9 @@ from .senders.websockets_sender import WebSocketSenderManager
 
 class ConnectionManager:
     def __init__(self):
-        self.managers = {}
+        self.managers: Dict[str, Tuple[Server, str]] = {}
 
-    def get(self, connection_type, uuid, direction):
+    def get(self, connection_type: str, uuid: str, direction: str) -> Server:
         """
         Retrieves or creates a new server manager instance for the given connection type and uuid.
         If a different connection type was previously used, it removes the old one and creates a new instance.
@@ -55,7 +58,7 @@ class ConnectionManager:
 
         return self.managers[uuid][0]  # Return the manager instance
 
-    def remove(self, uuid):
+    def remove(self, uuid: str):
         """
         Removes the server manager instance for the given uuid from the dictionary and ensures it is properly shut down.
         """
