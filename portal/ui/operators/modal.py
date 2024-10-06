@@ -2,7 +2,7 @@ import json
 import queue
 import time
 import traceback
-from typing import Optional
+from typing import Any, Optional
 
 import bpy
 from bpy.types import Context, Event, Scene, Timer
@@ -79,7 +79,7 @@ class ModalOperator(bpy.types.Operator):
 
         return {"RUNNING_MODAL"}
 
-    def cancel(self, context: Context):
+    def cancel(self, context: Context) -> None:
         if self._timer:
             context.window_manager.event_timer_remove(self._timer)
 
@@ -90,7 +90,7 @@ class ModalOperator(bpy.types.Operator):
 
     def _handle_send_event(
         self, context: Context, connection: PortalConnection, server_manager: Server
-    ):
+    ) -> None:
         try:
             message_to_send = self._construct_packet_dict(connection.dict_items)
             if not message_to_send or message_to_send == "{}" or message_to_send == "[]":
@@ -143,14 +143,14 @@ class ModalOperator(bpy.types.Operator):
         return json.dumps(meta)
 
     @staticmethod
-    def _get_property_from_path(path: str):
+    def _get_property_from_path(path: str) -> Any:
         # Use eval to resolve the path
         value = eval(path)
         return value
 
     def _handle_recv_event(
         self, context: Context, connection: PortalConnection, server_manager: Server
-    ):
+    ) -> None:
         while not server_manager.data_queue.empty():
             try:
                 data = server_manager.data_queue.get_nowait()
@@ -197,7 +197,7 @@ class ModalOperator(bpy.types.Operator):
         server_manager: Server,
         connection: PortalConnection,
         traceback: Optional[str] = None,
-    ):
+    ) -> dict:
         self.report({"ERROR"}, message)
         if traceback:
             print(traceback)
@@ -210,7 +210,7 @@ class ModalOperator(bpy.types.Operator):
         self.cancel(context)
         return {"CANCELLED"}
 
-    def _send_data_on_event(self, scene: Scene, connection: PortalConnection):
+    def _send_data_on_event(self, scene: Scene, connection: PortalConnection) -> None:
         current_time = time.time()
         if current_time - self.last_update_time < connection.event_timer:
             return  # Skip sending if within the delay threshold
@@ -222,12 +222,12 @@ class ModalOperator(bpy.types.Operator):
             return
         self._handle_send_event(bpy.context, connection, server_manager)
 
-    def _get_connection(self, context: Context):
+    def _get_connection(self, context: Context) -> Optional[PortalConnection]:
         return next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
 
-    def _get_connection_by_uuid(self, uuid: str):
+    def _get_connection_by_uuid(self, uuid: str) -> Optional[PortalConnection]:
         return next(
             (conn for conn in bpy.context.scene.portal_connections if conn.uuid == uuid), None
         )
@@ -241,7 +241,7 @@ class ModalOperator(bpy.types.Operator):
             return True
         return False
 
-    def _register_event_handlers(self, connection: PortalConnection):
+    def _register_event_handlers(self, connection: PortalConnection) -> None:
         if "RENDER_COMPLETE" in connection.event_types:
             self.render_complete_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.render_complete.append(self.render_complete_handler)
@@ -267,7 +267,7 @@ class ModalOperator(bpy.types.Operator):
                 self.report({"ERROR"}, f"Error loading custom event handler: {e}")
                 return {"CANCELLED"}
 
-    def _unregister_event_handlers(self):
+    def _unregister_event_handlers(self) -> None:
         if self.render_complete_handler:
             bpy.app.handlers.render_complete.remove(self.render_complete_handler)
             self.render_complete_handler = None
