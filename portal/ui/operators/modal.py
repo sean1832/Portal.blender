@@ -1,5 +1,5 @@
-import time
 import queue
+import time
 import traceback
 
 import bpy
@@ -79,6 +79,15 @@ class ModalOperator(bpy.types.Operator):
 
         MODAL_OPERATORS.pop(self.uuid, None)
         self._unregister_event_handlers()
+
+        # Stop the server manager if running
+        connection = self._get_connection(context)
+        if connection:
+            server_manager = self._get_server_manager(connection)
+            if server_manager and server_manager.is_running():
+                server_manager.stop_server()
+            connection.running = False
+            CONNECTION_MANAGER.remove(self.uuid)
 
         return None
 
