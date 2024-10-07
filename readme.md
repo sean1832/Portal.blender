@@ -14,7 +14,7 @@ Portal.blender is a Blender add-on that allows you to communicate data between B
 ## Compatibility
 | Portal.blender                                                                       | Portal.Gh                                                                                                                                      |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`0.2.4`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.3)             | [`0.5.2`](https://github.com/sean1832/Portal/releases/tag/0.5.2)                                                                               |
+| [`0.2.4`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.4)             | [`0.5.2`](https://github.com/sean1832/Portal/releases/tag/0.5.2)                                                                               |
 | [`0.2.3`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.3)             | [`0.5.2`](https://github.com/sean1832/Portal/releases/tag/0.5.2)                                                                               |
 | [`0.2.2`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.2)             | [`0.5.1`](https://github.com/sean1832/Portal/releases/tag/0.5.1)                                                                               |
 | [`0.2.1`](https://github.com/sean1832/Portal.blender/releases/tag/0.2.1)             | [`0.5.1`](https://github.com/sean1832/Portal/releases/tag/0.5.1)                                                                               |
