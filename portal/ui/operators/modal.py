@@ -29,6 +29,8 @@ class ModalOperator(bpy.types.Operator):
         self.frame_change_handler = None
         self.scene_update_handler = None
         self.custom_event_handler = None
+        self.connection_pre_save_handler = None
+        self.connection_post_save_handler = None
         self.last_update_time = 0  # Track the last update time for the delay
 
     def modal(self, context: Context, event: Event):
@@ -85,6 +87,15 @@ class ModalOperator(bpy.types.Operator):
 
         MODAL_OPERATORS.pop(self.uuid, None)
         self._unregister_event_handlers()
+
+        # Stop the server manager if running
+        connection = self._get_connection(context)
+        if connection:
+            server_manager = self._get_server_manager(connection)
+            if server_manager and server_manager.is_running():
+                server_manager.stop_server()
+            connection.running = False
+            SERVER_MANAGER.remove(self.uuid)
 
         return None
 
@@ -240,8 +251,19 @@ class ModalOperator(bpy.types.Operator):
             self.cancel(bpy.context)
             return True
         return False
+    
+    def _set_connection_state(self, scene, connection, state):
+        connection.running = state
 
-    def _register_event_handlers(self, connection: PortalConnection) -> None:
+    def _register_event_handlers(self, connection):
+        # set connection.running to False before saving to prevent next time starting automatically
+        self.connection_pre_save_handler = lambda scene: self._set_connection_state(scene, connection, False)
+        bpy.app.handlers.save_pre.append(self.connection_pre_save_handler)
+
+        # set connection.running to True after saving back to the original state
+        self.connection_post_save_handler = lambda scene: self._set_connection_state(scene, connection, True)
+        bpy.app.handlers.save_post.append(self.connection_post_save_handler)
+
         if "RENDER_COMPLETE" in connection.event_types:
             self.render_complete_handler = lambda scene: self._send_data_on_event(scene, connection)
             bpy.app.handlers.render_complete.append(self.render_complete_handler)
@@ -267,7 +289,15 @@ class ModalOperator(bpy.types.Operator):
                 self.report({"ERROR"}, f"Error loading custom event handler: {e}")
                 return {"CANCELLED"}
 
-    def _unregister_event_handlers(self) -> None:
+    def _unregister_event_handlers(self):
+        if self.connection_pre_save_handler:
+            bpy.app.handlers.save_pre.remove(self.connection_pre_save_handler)
+            self.connection_pre_save_handler = None
+        
+        if self.connection_post_save_handler:
+            bpy.app.handlers.save_post.remove(self.connection_post_save_handler)
+            self.connection_post_save_handler = None
+
         if self.render_complete_handler:
             bpy.app.handlers.render_complete.remove(self.render_complete_handler)
             self.render_complete_handler = None
