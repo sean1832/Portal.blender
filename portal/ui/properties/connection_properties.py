@@ -65,6 +65,16 @@ class PortalConnection(bpy.types.PropertyGroup):
     dict_items: bpy.props.CollectionProperty(type=DictionaryItem)
     dict_items_index: bpy.props.IntProperty(default=0)
 
+    post_event: bpy.props.EnumProperty(
+        name="Post Event",
+        description="Choose an action to execute after receiving data",
+        items=[
+            ("NONE", "None", "No event after receiving data"),
+            ("RENDER_FRAME", "Render Frame", "Render the current frame"),
+        ],
+    )
+    directory: bpy.props.StringProperty(name="Directory", default="")
+
 
 def register():
     bpy.utils.register_class(PortalConnection)

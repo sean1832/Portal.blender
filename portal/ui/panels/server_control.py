@@ -1,6 +1,8 @@
 import bpy
 from bpy.types import UILayout
 
+from portal.ui.properties.connection_properties import PortalConnection
+
 
 # Main panel to show connections
 class PORTAL_PT_ServerControl(bpy.types.Panel):
@@ -18,6 +20,7 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
 
         # List of connections
         for index, connection in enumerate(scene.portal_connections):
+            connection: PortalConnection  # Type hint for auto-complete
             box = layout.box()
             box.use_property_split = False  # Compact view for the box
 
@@ -79,7 +82,15 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                         self._draw_custom_handler(sub_box, connection)
 
                     sub_box.separator()
+
+                    # post-event
+                    sub_box.prop(connection, "post_event", text="Post Event")
+                    if connection.post_event == "RENDER_FRAME":
+                        self._draw_directory_selector(sub_box, connection)
+
+                    sub_box.separator()
                     sub_box.prop(connection, "event_timer")
+
                 else:
                     sub_box.separator()
                     sub_box.prop(connection, "event_types", text="Trigger Event")
@@ -93,6 +104,16 @@ class PORTAL_PT_ServerControl(bpy.types.Panel):
                         ).uuid = connection.uuid
 
         layout.operator("portal.add_connection", text="Add New Connection", icon="ADD")
+
+    def _draw_directory_selector(self, box: UILayout, connection: PortalConnection):
+        # Directory selector with file browser icon in a compact row
+        row = box.row(align=True)
+        row.prop(connection, "directory", text="Output Dir")
+        row.operator(
+            "portal.set_directory",
+            text="",
+            icon="FILEBROWSER",
+        ).uuid = connection.uuid
 
     def _draw_custom_handler(self, box: UILayout, connection):
         # Handler with prop_search and file browser icon in a compact row

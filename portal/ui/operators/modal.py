@@ -2,6 +2,8 @@ import json
 import queue
 import time
 import traceback
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
 
 import bpy
@@ -32,6 +34,7 @@ class ModalOperator(bpy.types.Operator):
         self.connection_pre_save_handler = None
         self.connection_post_save_handler = None
         self.last_update_time = 0  # Track the last update time for the delay
+        self.is_updated = False
 
     def modal(self, context: Context, event: Event):
         connection = self._get_connection(context)
@@ -57,6 +60,9 @@ class ModalOperator(bpy.types.Operator):
             self._handle_send_event(context, connection, server_manager)
         elif connection.direction == "RECV" and event.type == "TIMER":
             self._handle_recv_event(context, connection, server_manager)
+            if self.is_updated:
+                self._handle_post_event(connection)
+                self.is_updated = False
 
         return {"PASS_THROUGH"}
 
@@ -166,6 +172,7 @@ class ModalOperator(bpy.types.Operator):
             try:
                 data = server_manager.data_queue.get_nowait()
                 if not data or data == "{}" or data == "[]":  # Empty data
+                    self.is_updated = False
                     break
                 StringHandler.handle_string(
                     data,
@@ -174,7 +181,9 @@ class ModalOperator(bpy.types.Operator):
                     connection.name,
                     connection.custom_handler,
                 )
+                self.is_updated = True
             except queue.Empty:
+                self.is_updated = False
                 break
             except Exception as e:
                 self._report_error(
@@ -251,17 +260,35 @@ class ModalOperator(bpy.types.Operator):
             self.cancel(bpy.context)
             return True
         return False
-    
+
     def _set_connection_state(self, scene, connection, state):
         connection.running = state
 
+    def _handle_post_event(self, connection: PortalConnection):
+        if connection.post_event == "RENDER_FRAME":
+            if not connection.directory:
+                self.report({"ERROR"}, "Directory not specified for render frame event.")
+                return {"CANCELLED"}
+
+            out_path = Path(
+                connection.directory, f"frame_{datetime.now().timestamp()}.png"
+            ).as_posix()
+            bpy.context.scene.render.filepath = out_path
+            bpy.ops.render.render(write_still=True)
+            self.report({"INFO"}, "Rendering frame...")
+            return {"FINISHED"}
+
     def _register_event_handlers(self, connection):
         # set connection.running to False before saving to prevent next time starting automatically
-        self.connection_pre_save_handler = lambda scene: self._set_connection_state(scene, connection, False)
+        self.connection_pre_save_handler = lambda scene: self._set_connection_state(
+            scene, connection, False
+        )
         bpy.app.handlers.save_pre.append(self.connection_pre_save_handler)
 
         # set connection.running to True after saving back to the original state
-        self.connection_post_save_handler = lambda scene: self._set_connection_state(scene, connection, True)
+        self.connection_post_save_handler = lambda scene: self._set_connection_state(
+            scene, connection, True
+        )
         bpy.app.handlers.save_post.append(self.connection_post_save_handler)
 
         if "RENDER_COMPLETE" in connection.event_types:
@@ -293,7 +320,7 @@ class ModalOperator(bpy.types.Operator):
         if self.connection_pre_save_handler:
             bpy.app.handlers.save_pre.remove(self.connection_pre_save_handler)
             self.connection_pre_save_handler = None
-        
+
         if self.connection_post_save_handler:
             bpy.app.handlers.save_post.remove(self.connection_post_save_handler)
             self.connection_post_save_handler = None

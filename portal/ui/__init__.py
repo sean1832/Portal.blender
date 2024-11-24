@@ -2,6 +2,8 @@ from .operators.connections import register as _register_connections
 from .operators.connections import unregister as _unregister_connections
 from .operators.dict_editor import register as _register_dict_items
 from .operators.dict_editor import unregister as _unregister_dict_items
+from .operators.file_io import register as _register_file_io
+from .operators.file_io import unregister as _unregister_file_io
 from .operators.modal import register as _register_modal
 from .operators.modal import unregister as _unregister_modal
 from .operators.text_editor import register as _register_text_editor
@@ -22,6 +24,7 @@ def register():
     _register_dict_items_properties()
     _register_connection_properties()
     _register_dict_items()
+    _register_file_io()
 
 
 def unregister():
@@ -32,3 +35,4 @@ def unregister():
     _unregister_dict_items_properties()
     _unregister_connection_properties()
     _unregister_dict_items()
+    _unregister_file_io()
