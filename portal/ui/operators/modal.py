@@ -2,7 +2,6 @@ import json
 import queue
 import time
 import traceback
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -35,6 +34,7 @@ class ModalOperator(bpy.types.Operator):
         self.connection_post_save_handler = None
         self.last_update_time = 0  # Track the last update time for the delay
         self.is_updated = False
+        self.exec_count = 0
 
     def modal(self, context: Context, event: Event):
         connection = self._get_connection(context)
@@ -51,6 +51,9 @@ class ModalOperator(bpy.types.Operator):
             self.report({"ERROR"}, "Server has been shut down.")
             return {"CANCELLED"}
 
+        if not connection.running:
+            self.exec_count = 0  # Reset the execution count
+
         # Handle server errors and tracebacks
         if self._handle_server_errors(context, server_manager, connection):
             return {"CANCELLED"}
@@ -63,6 +66,7 @@ class ModalOperator(bpy.types.Operator):
             if self.is_updated:
                 self._handle_post_event(connection)
                 self.is_updated = False
+                self.exec_count += 1
 
         return {"PASS_THROUGH"}
 
@@ -271,7 +275,7 @@ class ModalOperator(bpy.types.Operator):
                 return {"CANCELLED"}
 
             out_path = Path(
-                connection.directory, f"frame_{datetime.now().timestamp()}.png"
+                connection.directory, f"frame_{self.exec_count}.png"
             ).as_posix()
             bpy.context.scene.render.filepath = out_path
             bpy.ops.render.render(write_still=True)
