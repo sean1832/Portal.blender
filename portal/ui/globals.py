@@ -1,4 +1,4 @@
-from ..server.connection_manager import ConnectionManager
+from ..server.server_manager import ServerManager
 
 MODAL_OPERATORS = {}
-CONNECTION_MANAGER = ConnectionManager()
+SERVER_MANAGER = ServerManager()

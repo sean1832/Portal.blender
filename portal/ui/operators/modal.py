@@ -1,13 +1,20 @@
+import json
 import queue
 import time
 import traceback
+from pathlib import Path
+from typing import Any, Optional
 
 import bpy
+from bpy.types import Context, Event, Scene, Timer
 
+from ...data_struct.mesh import Mesh
+from ...data_struct.payload import Payload
 from ...handlers.custom_handler import CustomHandler
 from ...handlers.string_handler import StringHandler
-from ..globals import CONNECTION_MANAGER, MODAL_OPERATORS
-from ..ui_utils.helper import construct_packet_dict
+from ...server.interface import Server
+from ..globals import MODAL_OPERATORS, SERVER_MANAGER
+from ..properties.connection_properties import PortalConnection
 
 
 class ModalOperator(bpy.types.Operator):
@@ -18,7 +25,7 @@ class ModalOperator(bpy.types.Operator):
     uuid: bpy.props.StringProperty()  # type: ignore
 
     def __init__(self):
-        self._timer = None
+        self._timer: Timer = None
         self.render_complete_handler = None
         self.frame_change_handler = None
         self.scene_update_handler = None
@@ -26,8 +33,10 @@ class ModalOperator(bpy.types.Operator):
         self.connection_pre_save_handler = None
         self.connection_post_save_handler = None
         self.last_update_time = 0  # Track the last update time for the delay
+        self.is_updated = False
+        self.exec_count = 0
 
-    def modal(self, context, event):
+    def modal(self, context: Context, event: Event):
         connection = self._get_connection(context)
         if not connection:
             self.report({"ERROR"}, "Connection not found.")
@@ -42,6 +51,9 @@ class ModalOperator(bpy.types.Operator):
             self.report({"ERROR"}, "Server has been shut down.")
             return {"CANCELLED"}
 
+        if not connection.running:
+            self.exec_count = 0  # Reset the execution count
+
         # Handle server errors and tracebacks
         if self._handle_server_errors(context, server_manager, connection):
             return {"CANCELLED"}
@@ -51,10 +63,14 @@ class ModalOperator(bpy.types.Operator):
             self._handle_send_event(context, connection, server_manager)
         elif connection.direction == "RECV" and event.type == "TIMER":
             self._handle_recv_event(context, connection, server_manager)
+            if self.is_updated:
+                self._handle_post_event(connection)
+                self.is_updated = False
+                self.exec_count += 1
 
         return {"PASS_THROUGH"}
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         connection = self._get_connection(context)
         if not connection:
             self.report({"ERROR"}, "Connection not found.")
@@ -75,7 +91,7 @@ class ModalOperator(bpy.types.Operator):
 
         return {"RUNNING_MODAL"}
 
-    def cancel(self, context):
+    def cancel(self, context: Context) -> None:
         if self._timer:
             context.window_manager.event_timer_remove(self._timer)
 
@@ -89,13 +105,15 @@ class ModalOperator(bpy.types.Operator):
             if server_manager and server_manager.is_running():
                 server_manager.stop_server()
             connection.running = False
-            CONNECTION_MANAGER.remove(self.uuid)
+            SERVER_MANAGER.remove(self.uuid)
 
         return None
 
-    def _handle_send_event(self, context, connection, server_manager):
+    def _handle_send_event(
+        self, context: Context, connection: PortalConnection, server_manager: Server
+    ) -> None:
         try:
-            message_to_send = construct_packet_dict(connection.dict_items)
+            message_to_send = self._construct_packet_dict(connection.dict_items)
             if not message_to_send or message_to_send == "{}" or message_to_send == "[]":
                 return
             server_manager.data_queue.put(message_to_send)
@@ -108,11 +126,57 @@ class ModalOperator(bpy.types.Operator):
                 traceback=traceback.format_exc(),
             )
 
-    def _handle_recv_event(self, context, connection, server_manager):
+    def _construct_packet_dict(self, data_items: dict) -> str:
+        """Helper function to construct a dictionary from a collection of dictionary items"""
+        payload = Payload()
+        meta = {}
+        contains_mesh = False
+        for item in data_items:
+            if item.value_type == "STRING":
+                meta[item.key] = item.value_string
+            elif item.value_type == "INT":
+                meta[item.key] = item.value_int
+            elif item.value_type == "FLOAT":
+                meta[item.key] = item.value_float
+            elif item.value_type == "BOOL":
+                meta[item.key] = item.value_bool
+            elif item.value_type == "TIMESTAMP":
+                meta[item.key] = int(time.time() * 1000)
+            elif item.value_type == "SCENE_OBJECT":
+                contains_mesh = True
+                scene_obj = item.value_scene_object
+                if scene_obj.type == "MESH":
+                    payload.add_items(Mesh.from_obj(scene_obj).to_dict())
+                elif scene_obj.type == "CAMERA":
+                    raise NotImplementedError("Camera object type is not supported yet")
+                elif scene_obj.type == "LIGHT":
+                    raise NotImplementedError("Light object type is not supported yet")
+                else:
+                    raise ValueError(f"Unsupported object type: {scene_obj.type}")
+            elif item.value_type == "PROPERTY_PATH":
+                meta[item.key] = self._get_property_from_path(item.value_property_path)
+            elif item.value_type == "UUID":
+                meta[item.key] = item.value_uuid
+
+        if contains_mesh:
+            payload.set_meta(meta)
+            return payload.to_json_str()
+        return json.dumps(meta)
+
+    @staticmethod
+    def _get_property_from_path(path: str) -> Any:
+        # Use eval to resolve the path
+        value = eval(path)
+        return value
+
+    def _handle_recv_event(
+        self, context: Context, connection: PortalConnection, server_manager: Server
+    ) -> None:
         while not server_manager.data_queue.empty():
             try:
                 data = server_manager.data_queue.get_nowait()
                 if not data or data == "{}" or data == "[]":  # Empty data
+                    self.is_updated = False
                     break
                 StringHandler.handle_string(
                     data,
@@ -121,7 +185,9 @@ class ModalOperator(bpy.types.Operator):
                     connection.name,
                     connection.custom_handler,
                 )
+                self.is_updated = True
             except queue.Empty:
+                self.is_updated = False
                 break
             except Exception as e:
                 self._report_error(
@@ -132,7 +198,9 @@ class ModalOperator(bpy.types.Operator):
                     traceback=traceback.format_exc(),
                 )
 
-    def _handle_server_errors(self, context, server_manager, connection):
+    def _handle_server_errors(
+        self, context: Context, server_manager: Server, connection: PortalConnection
+    ) -> bool:
         with server_manager.error_lock:
             error = server_manager.error
             server_traceback = server_manager.traceback
@@ -146,7 +214,14 @@ class ModalOperator(bpy.types.Operator):
             )
         return False
 
-    def _report_error(self, context, message, server_manager, connection, traceback=None):
+    def _report_error(
+        self,
+        context: Context,
+        message: str,
+        server_manager: Server,
+        connection: PortalConnection,
+        traceback: Optional[str] = None,
+    ) -> dict:
         self.report({"ERROR"}, message)
         if traceback:
             print(traceback)
@@ -155,11 +230,11 @@ class ModalOperator(bpy.types.Operator):
         if server_manager.is_running():
             server_manager.stop_server()
         connection.running = False
-        CONNECTION_MANAGER.remove(self.uuid)
+        SERVER_MANAGER.remove(self.uuid)
         self.cancel(context)
         return {"CANCELLED"}
 
-    def _send_data_on_event(self, scene, connection):
+    def _send_data_on_event(self, scene: Scene, connection: PortalConnection) -> None:
         current_time = time.time()
         if current_time - self.last_update_time < connection.event_timer:
             return  # Skip sending if within the delay threshold
@@ -171,35 +246,53 @@ class ModalOperator(bpy.types.Operator):
             return
         self._handle_send_event(bpy.context, connection, server_manager)
 
-    def _get_connection(self, context):
+    def _get_connection(self, context: Context) -> Optional[PortalConnection]:
         return next(
             (conn for conn in context.scene.portal_connections if conn.uuid == self.uuid), None
         )
 
-    def _get_connection_by_uuid(self, uuid):
+    def _get_connection_by_uuid(self, uuid: str) -> Optional[PortalConnection]:
         return next(
             (conn for conn in bpy.context.scene.portal_connections if conn.uuid == uuid), None
         )
 
-    def _get_server_manager(self, connection):
-        return CONNECTION_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
+    def _get_server_manager(self, connection: PortalConnection) -> Server:
+        return SERVER_MANAGER.get(connection.connection_type, self.uuid, connection.direction)
 
-    def _is_server_shutdown(self, server_manager):
+    def _is_server_shutdown(self, server_manager: Server) -> bool:
         if server_manager.is_shutdown():
             self.cancel(bpy.context)
             return True
         return False
-    
+
     def _set_connection_state(self, scene, connection, state):
         connection.running = state
 
+    def _handle_post_event(self, connection: PortalConnection):
+        if connection.post_event == "RENDER_FRAME":
+            if not connection.directory:
+                self.report({"ERROR"}, "Directory not specified for render frame event.")
+                return {"CANCELLED"}
+
+            out_path = Path(
+                connection.directory, f"frame_{self.exec_count}.png"
+            ).as_posix()
+            bpy.context.scene.render.filepath = out_path
+            bpy.ops.render.render(write_still=True)
+            self.report({"INFO"}, "Rendering frame...")
+            return {"FINISHED"}
+
     def _register_event_handlers(self, connection):
         # set connection.running to False before saving to prevent next time starting automatically
-        self.connection_pre_save_handler = lambda scene: self._set_connection_state(scene, connection, False)
+        self.connection_pre_save_handler = lambda scene: self._set_connection_state(
+            scene, connection, False
+        )
         bpy.app.handlers.save_pre.append(self.connection_pre_save_handler)
 
         # set connection.running to True after saving back to the original state
-        self.connection_post_save_handler = lambda scene: self._set_connection_state(scene, connection, True)
+        self.connection_post_save_handler = lambda scene: self._set_connection_state(
+            scene, connection, True
+        )
         bpy.app.handlers.save_post.append(self.connection_post_save_handler)
 
         if "RENDER_COMPLETE" in connection.event_types:
@@ -219,7 +312,7 @@ class ModalOperator(bpy.types.Operator):
                 handler = CustomHandler.load(
                     connection.custom_handler,
                     "MySendEventHandler",
-                    "https://github.com/sean1832/portal.blender/blob/main/templates/sender_handler.py",
+                    "https://github.com/sean1832/Portal.blender/blob/main/templates/send_handler.py",
                 )
                 self.custom_event_handler = handler(self._get_server_manager(connection))
                 self.custom_event_handler.register()
@@ -231,7 +324,7 @@ class ModalOperator(bpy.types.Operator):
         if self.connection_pre_save_handler:
             bpy.app.handlers.save_pre.remove(self.connection_pre_save_handler)
             self.connection_pre_save_handler = None
-        
+
         if self.connection_post_save_handler:
             bpy.app.handlers.save_post.remove(self.connection_post_save_handler)
             self.connection_post_save_handler = None

@@ -23,26 +23,28 @@ except ImportError:
 class PipeSenderManager:
     def __init__(self, uuid):
         self.uuid = uuid
-        self.connection = next(
+        self.error = None
+        self.error_lock = threading.Lock()
+        self.traceback = None
+        self.data_queue = queue.Queue()
+
+        # private
+        self._connection = next(
             (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
             None,
         )
-        self.shutdown_event = threading.Event()
-        self.error_lock = threading.Lock()
-        self.error = None
-        self.traceback = None
+        self._shutdown_event = threading.Event()
         self._client_thread = None
-        self.data_queue = queue.Queue()
         self._last_checksum = None
-        self.pipe_handle = None
+        self._pipe_handle = None
 
     def _connect_to_pipe(self):
         """Attempt to connect to the named pipe server."""
-        pipe_name = rf"\\.\pipe\{self.connection.name}"
-        while not self.shutdown_event.is_set():
+        pipe_name = rf"\\.\pipe\{self._connection.name}"
+        while not self._shutdown_event.is_set():
             try:
                 # Try to open the named pipe in overlapped mode
-                self.pipe_handle = win32file.CreateFile(
+                self._pipe_handle = win32file.CreateFile(
                     pipe_name,
                     win32file.GENERIC_WRITE,
                     0,
@@ -71,16 +73,16 @@ class PipeSenderManager:
     def _send_loop(self):
         if not PYWIN32_AVAILABLE:
             return
-        print(f"Starting send loop for pipe: {self.connection.name}")
+        print(f"Starting send loop for pipe: {self._connection.name}")
 
         self._connect_to_pipe()
 
-        if self.pipe_handle is None:
+        if self._pipe_handle is None:
             print("Failed to connect to pipe.")
             return
 
         try:
-            while not self.shutdown_event.is_set():
+            while not self._shutdown_event.is_set():
                 try:
                     data = self.data_queue.get(timeout=0.1)
                     self._send(data, compress=True)
@@ -120,7 +122,7 @@ class PipeSenderManager:
             overlapped.hEvent = win32event.CreateEvent(None, True, False, None)
 
             # Write data to the pipe asynchronously
-            win32file.WriteFile(self.pipe_handle, packet.serialize(), overlapped)
+            win32file.WriteFile(self._pipe_handle, packet.serialize(), overlapped)
             # Wait for the write operation to complete
             win32event.WaitForSingleObject(overlapped.hEvent, win32event.INFINITE)
             win32file.CloseHandle(overlapped.hEvent)
@@ -133,29 +135,33 @@ class PipeSenderManager:
 
     def _close_handles(self):
         """Close the pipe handle."""
-        if self.pipe_handle:
+        if self._pipe_handle:
             try:
-                win32file.CloseHandle(self.pipe_handle)
+                win32file.CloseHandle(self._pipe_handle)
             except pywintypes.error:
                 pass
-            self.pipe_handle = None
+            self._pipe_handle = None
 
     def start_server(self):
-        self.shutdown_event.clear()
+        self._shutdown_event.clear()
         self._client_thread = threading.Thread(target=self._send_loop, daemon=True)
         self._client_thread.start()
-        print(f"Pipe sender started for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(
+            f"Pipe sender started for connection uuid: {self.uuid}, name: {self._connection.name}"
+        )
 
     def stop_server(self):
         """Gracefully stop the sender."""
-        self.shutdown_event.set()
+        self._shutdown_event.set()
         if self._client_thread:
             self._client_thread.join()
         self._close_handles()
-        print(f"Pipe sender stopped for connection uuid: {self.uuid}, name: {self.connection.name}")
+        print(
+            f"Pipe sender stopped for connection uuid: {self.uuid}, name: {self._connection.name}"
+        )
 
     def is_running(self):
         return self._client_thread is not None and self._client_thread.is_alive()
 
     def is_shutdown(self):
-        return self.shutdown_event.is_set()
+        return self._shutdown_event.is_set()

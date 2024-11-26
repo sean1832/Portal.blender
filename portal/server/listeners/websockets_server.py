@@ -20,20 +20,22 @@ from ...handlers.binary_handler import BinaryHandler
 class WebSocketListenerManager:
     def __init__(self, uuid):
         self.uuid = uuid
-        self.connection = next(
+        self.error = None
+        self.error_lock = threading.Lock()
+        self.traceback = None
+        self.data_queue = queue.Queue()
+
+        # private
+        self._connection = next(
             (conn for conn in bpy.context.scene.portal_connections if conn.uuid == self.uuid),
             None,
         )
-        self.data_queue = queue.Queue()
-        self.shutdown_event = threading.Event()
+        self._shutdown_event = threading.Event()
         self._server_thread = None
         self._app = None
         self._runner = None
         self._site = None
-        self.loop = None  # asyncio loop reference
-        self.error = None
-        self.traceback = None
-        self.error_lock = threading.Lock()
+        self._loop = None  # asyncio loop reference
 
     async def _websocket_handler(self, request):
         if not DEPENDENCIES_AVAILABLE:
@@ -80,12 +82,12 @@ class WebSocketListenerManager:
             self._runner = web.AppRunner(self._app)
             await self._runner.setup()
 
-            host = "0.0.0.0" if self.connection.is_external else "localhost"
-            port = self.connection.port  # port specific to the connection
+            host = "0.0.0.0" if self._connection.is_external else "localhost"
+            port = self._connection.port  # port specific to the connection
             self._site = web.TCPSite(self._runner, host, port)
             await self._site.start()
 
-            while not self.shutdown_event.is_set():
+            while not self._shutdown_event.is_set():
                 try:
                     await asyncio.sleep(1)
                 except asyncio.CancelledError:
@@ -101,30 +103,30 @@ class WebSocketListenerManager:
         if not DEPENDENCIES_AVAILABLE:
             return
 
-        self.shutdown_event.clear()
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        self._shutdown_event.clear()
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
 
         self._server_thread = threading.Thread(target=self._run_loop_in_thread, daemon=True)
         self._server_thread.start()
 
         print(
-            f"WebSocket server started for connection uuid: {self.uuid}, name: {self.connection.name}"
+            f"WebSocket server started for connection uuid: {self.uuid}, name: {self._connection.name}"
         )
 
     def _run_loop_in_thread(self):
-        self.loop.run_until_complete(self._run_server())
-        self.loop.run_forever()
+        self._loop.run_until_complete(self._run_server())
+        self._loop.run_forever()
 
-    async def shutdown_server(self):
+    async def _shutdown_server(self):
         if self._runner:
             # Get the current task (the one running shutdown_server)
-            current_task = asyncio.current_task(loop=self.loop)
+            current_task = asyncio.current_task(loop=self._loop)
 
             # Cancel all other tasks except the current one
             tasks = [
                 task
-                for task in asyncio.all_tasks(self.loop)
+                for task in asyncio.all_tasks(self._loop)
                 if task is not current_task and not task.done()
             ]
             for task in tasks:
@@ -135,21 +137,21 @@ class WebSocketListenerManager:
             await self._runner.cleanup()
 
         # Stop the loop
-        self.loop.stop()
+        self._loop.stop()
 
     def stop_server(self):
         if not DEPENDENCIES_AVAILABLE:
             return
 
-        self.shutdown_event.set()
-        if self.loop:
-            asyncio.run_coroutine_threadsafe(self.shutdown_server(), self.loop)
+        self._shutdown_event.set()
+        if self._loop:
+            asyncio.run_coroutine_threadsafe(self._shutdown_server(), self._loop)
 
         if self._server_thread:
             self._server_thread.join(1)
 
         print(
-            f"WebSocket server stopped for connection uuid: {self.uuid}, name: {self.connection.name}"
+            f"WebSocket server stopped for connection uuid: {self.uuid}, name: {self._connection.name}"
         )
 
     def is_running(self):
@@ -161,4 +163,4 @@ class WebSocketListenerManager:
     def is_shutdown(self):
         if not DEPENDENCIES_AVAILABLE:
             return True
-        return self.shutdown_event.is_set()
+        return self._shutdown_event.is_set()
