@@ -3,6 +3,8 @@
 ![Static Badge](https://img.shields.io/badge/blender-4.2.0%2B-blue)
 ![GitHub License](https://img.shields.io/github/license/sean1832/portal.blender)
 
+<a href="https://www.buymeacoffee.com/zekezhang" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a>
+
 Portal.blender is a Blender add-on that allows you to communicate data between Blender and other applications using IPC. It is the Blender adaptor of the [Portal](https://github.com/sean1832/portal) project.
 
 > *⭐️ Like this repo? please consider a star!*
